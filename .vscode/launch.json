@@ -1,0 +1,60 @@
+// launch.json contains information needed for the debugger to attach to  processes
+// See https://code.visualstudio.com/Docs/editor/debugging#_launch-configurations
+// for documentation about how to create and manage configurations
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run on Kubernetes",
+      "type": "cloudcode.kubernetes",
+      "request": "launch",
+      "skaffoldConfig": "${workspaceFolder}/skaffold.yaml",
+      "watch": true,
+      "cleanUp": false,
+      "portForward": true,
+      "internalConsoleOptions": "neverOpen",
+      "debug": [
+        {
+          "image": "dotnet-frontend",
+          "containerName": "frontend",
+          "sourceFileMap": {
+            "${workspaceFolder}\\src\\frontend": "/src"
+          }
+        },
+        {
+          "image": "dotnet-backend",
+          "containerName": "backend",
+          "sourceFileMap": {
+            "${workspaceFolder}\\src\\backend": "/src"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attach to Kubernetes pod (frontend)",
+      "type": "cloudcode.kubernetes",
+      "request": "attach",
+      "language": "NETCore",
+      "debugPort": 9229,
+      "localRoot": "${workspaceFolder}/src/frontend",
+      "remoteRoot": "/src",
+      "podSelector": {
+        "app": "dotnet",
+        "tier": "frontend"
+      }
+    },
+    {
+      "name": "Attach to Kubernetes pod (backend)",
+      "type": "cloudcode.kubernetes",
+      "request": "attach",
+      "language": "NETCore",
+      "debugPort": 9230,
+      "localRoot": "${workspaceFolder}/src/backend",
+      "remoteRoot": "/src",
+      "podSelector": {
+        "app": "dotnet",
+        "tier": "backend"
+      }
+    }
+  ]
+}

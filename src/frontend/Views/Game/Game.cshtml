@@ -1,0 +1,96 @@
+@model MinesweeperGame
+
+<script src="~/lib/jquery/dist/jquery.min.js" type="text/javascript" ></script>
+<script>
+    $(document).contextmenu(function () { return false; });
+    $(document).ready(function () {
+        $('.minesweeper-button-uncovered').mousedown(function (event) {
+            if (event.which == 3) {
+                console.log("Pressed");
+                $.post("flag/@(Model.Id)/" + this.getAttribute('x') + "/" + this.getAttribute('y'), {}, function (data) {
+                    $("body").html(data);
+                });
+            }
+        })
+
+        $('.minesweeper-button-flag').mousedown(function (event) {
+            if (event.which == 3) {
+                console.log("Pressed");
+                $.post("flag/@(Model.Id)/" + this.getAttribute('x') + "/" + this.getAttribute('y'), {}, function (data) {
+                    $("body").html(data);
+                });
+            }
+        })
+    });
+</script>
+
+<div class="header">
+    @if (Model?.Board == null)
+    {
+        <div class="alert alert-info" role="alert">
+            <button onclick="location.href='new'">New Game</button>
+        </div>
+    }
+    else
+    {
+        var cols = Model.Board?.Length ?? 0;
+        var rows = Model.Board?[0]?.Length ?? 0;
+        var gameBoard = Model.Board;
+        var style = $"--col: {string.Concat(Enumerable.Repeat(" 32px", cols))}; --row: 32px;";
+        <div>
+            Mines: @(Model.MineCount)
+            <br/>
+            Flags: @(Model.FlagPoints.Count())
+        </div>
+        @if (Model.Board.Any(y => y.Any(x => x == -2)))
+        {
+            <div>
+                Game Over
+                <button onclick="location.href='new'">New Game</button>
+            </div>
+        }
+        @if (Model.Board.Sum(y => y.Where(x => x >= 0).Count()) == (cols*rows - Model.MineCount))
+        {
+            <div>
+                Victory
+                <button onclick="location.href='new'">New Game</button>
+            </div>
+        }
+
+        <div class="grid-container" style="@(style)">
+            @foreach (var y in Enumerable.Range(0, rows))
+            {
+                @foreach (var x in Enumerable.Range(0, cols))
+                {
+                    <div class="grid-item">
+                        <div class="minesweeper-tile">
+                            <form action="~/game/@(Model.Id)/@(x)/@(y)" method="post">
+                            @Html.AntiForgeryToken()
+                            @{
+                                switch (gameBoard[x][y])
+                                {
+                                    case -1:
+                                        <button class="minesweeper-button-uncovered" type="submit" x=@(x) y=@(y) />
+                                        break;
+                                    case -2:
+                                        <button class="minesweeper-button-bomb" x=@(x) y=@(y) disabled />
+                                        break;
+                                    case -3:
+                                        <button class="minesweeper-button-flag" x=@(x) y=@(y) >F</button>
+                                        break;
+                                    case 0:
+                                        <button class="minesweeper-button" x=@(x) y=@(y) disabled />
+                                        break;
+                                    default:
+                                        <button class="minesweeper-button" x=@(x) y=@(y) disabled>@(gameBoard[x][y])</button>
+                                        break;
+                                }
+                            }
+                            </form>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
