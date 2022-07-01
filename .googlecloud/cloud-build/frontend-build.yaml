@@ -22,8 +22,7 @@ steps:
 
         mv  dist_linux/docker-slim-sensor /usr/local/bin/;
 
-        docker-slim build --env API_ADDR=localhost --env PORT=8090
-        --new-expose=8080 --http-probe-ports=8080 --http-probe-exec 'curl --connect-timeout=5 http://localhost:8080/'
+        docker-slim build --env API_ADDR=localhost --env PORT=8090 --http-probe-exec 'curl --connect-timeout=5 http://localhost:8080/'
         --sensor-ipc-mode proxy --sensor-ipc-endpoint $(docker network inspect
         bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' | cut -f1)
         ${_IMAGE_NAME};
