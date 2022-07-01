@@ -60,7 +60,6 @@ namespace dotnet
             }
 
             // Set the address of the backend microservice
-            envConfig.BackendAddress = $"http://{backendAddr}:{port}/messages";
             envConfig.BackendGameAddress = $"http://{backendAddr}:{port}/game";
 
 
@@ -80,18 +79,9 @@ namespace dotnet
 
             app.UseEndpoints(endpoints =>
             {
-                // endpoints.MapControllerRoute(
-                //     name: "postRoute",
-                //     pattern: "{controller=Home}/{action=Post}/");
-
-                endpoints.MapControllerRoute(
-                    name: "postRoute",
-                    pattern: "{controller}/post",
-                    defaults: new { controller = "Home", action = "Post" });
-
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{controller=Home}/{action=Index}");
                 
                 endpoints.MapControllerRoute(
                     name: "game",

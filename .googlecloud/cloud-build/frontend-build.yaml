@@ -1,0 +1,65 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - '--no-cache'
+      - '-t'
+      - '$_IMAGE_NAME:$COMMIT_SHA'
+      - src/frontend
+      - '-f'
+      - src/frontend/Dockerfile
+    id: Build
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - '-c'
+      - >
+        curl -L -o ds.tar.gz
+        https://downloads.dockerslim.com/releases/1.37.4/dist_linux.tar.gz;
+
+        tar -xvf ds.tar.gz;
+
+        mv  dist_linux/docker-slim /usr/local/bin/;
+
+        mv  dist_linux/docker-slim-sensor /usr/local/bin/;
+
+        docker-slim build --env API_ADDR=localhost --env PORT=80
+        --sensor-ipc-mode proxy --sensor-ipc-endpoint $(docker network inspect
+        bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' | cut -f1)
+        ${_IMAGE_NAME};
+    entrypoint: bash
+    id: Docker Slim
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - '$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+    id: Push
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
+      - '--platform=managed'
+      - '--image=$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+      - >-
+        --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID,$_LABELS
+      - '--region=$_DEPLOY_REGION'
+      - '--quiet'
+    id: Deploy
+    entrypoint: gcloud
+images:
+  - '$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+options:
+  substitutionOption: ALLOW_LOOSE
+substitutions:
+  _SERVICE_NAME: minesweeper
+  _IMAGE_NAME: $_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME
+  _DEPLOY_REGION: us-central1
+  _GCR_HOSTNAME: us.gcr.io
+  _PLATFORM: managed
+  _LABELS: gcb-trigger-id=4f4def75-2065-480d-bce7-633339f6275b
+  _TRIGGER_ID: 4f4def75-2065-480d-bce7-633339f6275b
+tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+  - minesweeper
