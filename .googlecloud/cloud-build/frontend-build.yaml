@@ -24,7 +24,7 @@ steps:
 
         docker-slim build --env API_ADDR=localhost --env PORT=8090
         --sensor-ipc-mode proxy --sensor-ipc-endpoint $(docker network inspect
-        bridge -f '{{range .IPAM.Config}}[1]{{.Gateway}}{{end}}' | cut -f1)
+        bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' | cut -f1)
         ${_IMAGE_NAME};
     entrypoint: bash
     id: Docker Slim
