@@ -53,7 +53,7 @@ namespace dotnet
 
             // PORT environment variable is provided in frontend.deployment.yaml.
             var port = Environment.GetEnvironmentVariable("PORT");
-            logger.LogInformation($"Port env var is set to {port}");
+            logger.LogInformation($"Port is set to {port}");
             if (string.IsNullOrEmpty(port))
             {
                 throw new ArgumentException("PORT environment variable is not set");
