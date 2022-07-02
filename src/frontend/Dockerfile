@@ -22,7 +22,8 @@ RUN adduser --disabled-password \
 USER dotnetuser
 
 WORKDIR /app
-EXPOSE 5555
+EXPOSE 80
 COPY --from=publish /app/publish .
+ENV ASPNETCORE_URLS=http://*:8080
 
-ENTRYPOINT ["./frontend", "--urls", "http://localhost:5555"]
+ENTRYPOINT ["./frontend"]
