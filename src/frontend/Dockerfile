@@ -23,6 +23,6 @@ USER dotnetuser
 
 WORKDIR /app
 EXPOSE 5555
-COPY --from=publish /app .
+COPY --from=publish /app/publish .
 
 ENTRYPOINT ["./frontend", "--urls", "http://localhost:5555"]
