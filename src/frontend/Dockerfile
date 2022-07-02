@@ -1,27 +1,28 @@
-FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+FROM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS publish
 WORKDIR /src
-EXPOSE 80
+COPY frontend.csproj ./
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /src
+RUN dotnet restore frontend.csproj --runtime alpine-x64
 COPY . .
-RUN dotnet restore frontend.csproj
-RUN dotnet build "./frontend.csproj" -c Debug -o /out
 
-FROM build AS publish
-RUN dotnet publish frontend.csproj -c Debug -o /out
+RUN dotnet publish frontend.csproj -c Release -o /app/publish \
+    --no-restore \ 
+    --runtime alpine-x64 \
+    --self-contained true \
+    /p:PublishTrimmed=true \
+    /p:PublishSingleFile=true
 
 # Building final image used in running container
-FROM base AS final
-WORKDIR /src
-COPY --from=publish /out .
-ENV ASPNETCORE_URLS=http://*:8080
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-alpine AS final
 
-# Installing procps on the container to enable debugging of .NET Core
-RUN apt -o Acquire::https::No-Cache=True -o Acquire::http::No-Cache=True update \
-    && apt --fix-broken install \
-    && apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends apt-utils unzip \
-    && apt-get install -y procps
-ENTRYPOINT ["dotnet", "frontend.dll"]
+RUN adduser --disabled-password \
+  --home /app \
+  --gecos '' dotnetuser && chown -R dotnetuser /app
+
+USER dotnetuser
+
+WORKDIR /app
+EXPOSE 5555
+COPY --from=publish /app .
+
+ENTRYPOINT ["./frontend", "--urls", "http://localhost:5555"]

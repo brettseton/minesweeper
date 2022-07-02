@@ -11,25 +11,6 @@ steps:
     id: Build
   - name: gcr.io/cloud-builders/docker
     args:
-      - '-c'
-      - >
-        curl -L -o ds.tar.gz
-        https://downloads.dockerslim.com/releases/1.37.6/dist_linux.tar.gz;
-
-        tar -xvf ds.tar.gz;
-
-        mv  dist_linux/docker-slim /usr/local/bin/;
-
-        mv  dist_linux/docker-slim-sensor /usr/local/bin/;
-
-        docker-slim build --env API_ADDR=localhost --env PORT=8090
-        --sensor-ipc-mode proxy --sensor-ipc-endpoint $(docker network inspect
-        bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' | cut -f1)
-        ${_IMAGE_NAME}:${COMMIT_SHA};
-    entrypoint: bash
-    id: Docker Slim
-  - name: gcr.io/cloud-builders/docker
-    args:
       - push
       - '$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
     id: Push
