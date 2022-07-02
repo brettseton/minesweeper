@@ -71,7 +71,7 @@ jobs:
         run: echo "steps.meta.outputs ${{ steps.meta.outputs }}"
 
       - name: Test output 2
-        run: echo "steps.meta.outputs.tags ${{ steps.meta.outputs.tags }}"
+        run: echo "steps.meta.outputs.tags ${{ toJson(steps.meta.outputs.tags) }}"
 
       - name: Test output 3
         run: echo "steps.meta.outputs.tags ${{ steps.meta.outputs.tags[0] }}"
