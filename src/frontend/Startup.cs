@@ -44,7 +44,7 @@ namespace dotnet
         public void Configure(IApplicationBuilder app,  IWebHostEnvironment env, ILogger<Startup> logger)
         {
             // API_ADDR environment variable is provided in frontend.deployment.yaml.
-            var backendAddr = Environment.GetEnvironmentVariable("API_ADDR");
+            var backendAddr = Environment.GetEnvironmentVariable("BACKEND_API_ADDR");
             logger.LogInformation($"Backend address is set to {backendAddr}");
             if (string.IsNullOrEmpty(backendAddr))
             {
@@ -52,7 +52,7 @@ namespace dotnet
             }
 
             // PORT environment variable is provided in frontend.deployment.yaml.
-            var port = Environment.GetEnvironmentVariable("PORT");
+            var port = Environment.GetEnvironmentVariable("BACKEND_PORT");
             logger.LogInformation($"Port is set to {port}");
             if (string.IsNullOrEmpty(port))
             {
@@ -61,7 +61,6 @@ namespace dotnet
 
             // Set the address of the backend microservice
             envConfig.BackendGameAddress = $"http://{backendAddr}:{port}/game";
-
 
             if (env.IsDevelopment())
             {

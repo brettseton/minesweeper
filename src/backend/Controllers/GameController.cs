@@ -29,9 +29,8 @@ namespace backend.Controllers
             if ((id ?? 0) == 0) return RedirectToAction("New");
             _logger.LogInformation($"Getting game {id}");
             var game = _repository.GetGame(id ?? 0);
-            if (game.Moves != null) {
-                _logger.LogInformation("Got Moves: {0}", string.Join("->", game.Moves.ToList().Select(x => $"({x.x}, {x.y})")));
-            }
+            if (game == null)
+              return NotFound(id);
             var numberOfColumns = game.Board.Length;
             var numberOfRows = game.Board[0].Length;
             var gameState = new MinesweeperGame()
@@ -179,7 +178,7 @@ namespace backend.Controllers
                     }
                 }
             }
-            return new MinesweeperGame(){Id = random.Next() ,Board = board, Moves = new HashSet<Point>(), MinePoints = minePoints, FlagPoints = new HashSet<Point>()};
+            return new MinesweeperGame(){Id = random.Next(), Board = board, Moves = new HashSet<Point>(), MinePoints = minePoints, FlagPoints = new HashSet<Point>()};
         }
     }
 

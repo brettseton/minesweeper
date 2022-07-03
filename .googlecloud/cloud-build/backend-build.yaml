@@ -5,9 +5,9 @@ steps:
       - '--no-cache'
       - '-t'
       - '$_IMAGE_NAME:$COMMIT_SHA'
-      - src/frontend
+      - src/backend
       - '-f'
-      - src/frontend/Dockerfile
+      - src/backend/Dockerfile
     id: Build
   - name: gcr.io/cloud-builders/docker
     args:
@@ -34,14 +34,14 @@ options:
   substitutionOption: ALLOW_LOOSE
   dynamic_substitutions: true
 substitutions:
-  _SERVICE_NAME: minesweeper
+  _SERVICE_NAME: minesweeper-backend
   _DEPLOY_REGION: us-central1
   _GCR_HOSTNAME: us.gcr.io
   _PLATFORM: managed
   _LABELS: gcb-trigger-id=4f4def75-2065-480d-bce7-633339f6275b
   _TRIGGER_ID: 4f4def75-2065-480d-bce7-633339f6275b
-  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/frontend
+  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/backend
 tags:
   - gcp-cloud-build-deploy-cloud-run
   - gcp-cloud-build-deploy-cloud-run-managed
-  - minesweeper-frontend
+  - minesweeper-backend

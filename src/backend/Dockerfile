@@ -1,23 +1,29 @@
-FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+FROM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS publish
 WORKDIR /src
-EXPOSE 80
+COPY backend.csproj ./
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /src
+RUN dotnet restore backend.csproj --runtime alpine-x64
 COPY . .
-RUN dotnet restore backend.csproj
-RUN dotnet build "./backend.csproj" -c Debug -o /out
 
-FROM build AS publish
-RUN dotnet publish backend.csproj -c Debug -o /out
+RUN dotnet publish backend.csproj -c Release -o /app/publish \
+    --no-restore \ 
+    --runtime alpine-x64 \
+    --self-contained true \
+    /p:PublishTrimmed=true \
+    /p:PublishSingleFile=true
 
 # Building final image used in running container
-FROM base AS final
-WORKDIR /src
-COPY --from=publish /out .
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-alpine AS final
+
+RUN adduser --disabled-password \
+  --home /app \
+  --gecos '' dotnetuser && chown -R dotnetuser /app
+
+USER dotnetuser
+
+WORKDIR /app
+EXPOSE 80
+COPY --from=publish /app/publish .
 ENV ASPNETCORE_URLS=http://*:8080
 
-# Installing procps on the container to enable debugging of .NET Core
-RUN apt-get update \
-    && apt-get install -y unzip procps
-ENTRYPOINT ["dotnet", "backend.dll"]
+ENTRYPOINT ["./backend"]

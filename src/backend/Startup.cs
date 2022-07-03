@@ -38,7 +38,8 @@ namespace backend
             // Pass the configuration for connecting to MongoDB to Dependency Injection container
             services.Configure<MongoConfig>(c => c.DatabaseAddress = $"mongodb://{databaseAddr}");
 
-            services.AddScoped<IGameRepository, GameRepository>();
+            //services.AddScoped<IGameRepository, GameRepository>();
+            services.AddSingleton<IGameRepository, MockGameRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
