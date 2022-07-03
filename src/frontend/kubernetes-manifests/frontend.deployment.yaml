@@ -35,3 +35,5 @@ spec:
           value: "8080"
         - name: BACKEND_API_ADDR
           value: dotnet-backend
+        - name: IS_HTTPS
+          value: "1"

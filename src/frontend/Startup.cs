@@ -59,8 +59,11 @@ namespace dotnet
                 throw new ArgumentException("PORT environment variable is not set");
             }
 
+            bool.TryParse(Environment.GetEnvironmentVariable("IS_HTTPS"), out bool isHttps);
+            logger.LogInformation($"Is Https is set to {isHttps}");
+
             // Set the address of the backend microservice
-            envConfig.BackendGameAddress = $"http://{backendAddr}:{port}/game";
+            envConfig.BackendGameAddress = $"http{(isHttps ? "s" : "")}://{backendAddr}:{port}/game";
 
             if (env.IsDevelopment())
             {
