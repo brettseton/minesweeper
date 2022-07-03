@@ -36,4 +36,4 @@ spec:
         - name: BACKEND_API_ADDR
           value: dotnet-backend
         - name: IS_HTTPS
-          value: "1"
+          value: "false"
