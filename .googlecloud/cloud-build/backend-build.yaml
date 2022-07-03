@@ -19,7 +19,7 @@ steps:
       - run
       - services
       - update
-      - $_SERVICE_NAME
+      - $_CLOUD_SERVICE_NAME
       - '--platform=managed'
       - '--image=$_IMAGE_NAME:$COMMIT_SHA'
       - >-
@@ -34,7 +34,8 @@ options:
   substitutionOption: ALLOW_LOOSE
   dynamic_substitutions: true
 substitutions:
-  _SERVICE_NAME: minesweeper-backend
+  _SERVICE_NAME: minesweeper
+  _CLOUD_SERVICE_NAME: minesweeper-backend
   _DEPLOY_REGION: us-central1
   _GCR_HOSTNAME: us.gcr.io
   _PLATFORM: managed
