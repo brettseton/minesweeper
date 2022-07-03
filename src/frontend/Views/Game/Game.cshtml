@@ -65,7 +65,7 @@
                     <div class="grid-item">
                         <div class="minesweeper-tile">
                             <form action="~/game/@(Model.Id)/@(x)/@(y)" method="post">
-                            @Html.AntiForgeryToken()
+                            @* @Html.AntiForgeryToken() *@
                             @{
                                 switch (gameBoard[x][y])
                                 {

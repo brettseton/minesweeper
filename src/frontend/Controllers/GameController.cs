@@ -84,7 +84,7 @@ namespace dotnet.Controllers
         }
 
         [HttpPost("{id}/{x}/{y}")]
-        [ValidateAntiForgeryToken]
+        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> Post([FromRoute] int id, [FromRoute] int x, [FromRoute] int y)
         {
             _logger.LogInformation($"Guess co-ordinates {x},{y}");
@@ -94,7 +94,8 @@ namespace dotnet.Controllers
                 var httpClient = _factory.CreateClient();
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 var httpContent = new StringContent($"{{ \"x\": {x}, \"y\": {y} }}", Encoding.UTF8, "application/json");
-                await httpClient.PostAsync($"{_envConfig.BackendGameAddress}/{id}", httpContent);
+                var response = await httpClient.PostAsync($"{_envConfig.BackendGameAddress}/{id}", httpContent);
+                _logger.LogInformation("Got Post Response: {0}", response);
                 return Redirect($"~/game/{id}");
             }
             catch (Exception e)
@@ -114,7 +115,8 @@ namespace dotnet.Controllers
                 var httpClient = _factory.CreateClient();
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 var httpContent = new StringContent($"{{ \"x\": {x}, \"y\": {y} }}", Encoding.UTF8, "application/json");
-                await httpClient.PostAsync($"{_envConfig.BackendGameAddress}/flag/{id}", httpContent);
+                var response = await httpClient.PostAsync($"{_envConfig.BackendGameAddress}/flag/{id}", httpContent);
+                _logger.LogInformation("Got ToggleFlag Response: {0}", response);
                 return Redirect($"~/game/{id}");
             }
             catch (Exception e)
