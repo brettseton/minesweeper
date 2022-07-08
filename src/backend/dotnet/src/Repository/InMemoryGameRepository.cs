@@ -1,16 +1,16 @@
-using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
-namespace backend
+namespace backend.Repository
 {
-    public class MockGameRepository : IGameRepository
+    public class InMemoryGameRepository : IGameRepository
     {
-        private ILogger logger;
-        private Dictionary<int, MinesweeperGame> _entities;
+        private readonly ILogger logger;
+        private readonly Dictionary<int, MinesweeperGame> _entities;
 
-        public MockGameRepository(ILoggerFactory loggingFactory)
+        public InMemoryGameRepository(ILoggerFactory loggingFactory)
         {
-            logger = loggingFactory.CreateLogger<MockGameRepository>();
+            logger = loggingFactory.CreateLogger<InMemoryGameRepository>();
             _entities = new Dictionary<int, MinesweeperGame>();
         }
 

@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-
-namespace backend
+namespace backend.Repository
 {
     public interface IGameRepository
     {

@@ -1,9 +1,10 @@
-﻿using System;
+﻿using backend.Repository;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
 
 namespace backend
 {
@@ -39,7 +40,7 @@ namespace backend
             services.Configure<MongoConfig>(c => c.DatabaseAddress = $"mongodb://{databaseAddr}");
 
             //services.AddScoped<IGameRepository, GameRepository>();
-            services.AddSingleton<IGameRepository, MockGameRepository>();
+            services.AddSingleton<IGameRepository, InMemoryGameRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

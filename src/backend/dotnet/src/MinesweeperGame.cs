@@ -1,7 +1,6 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Collections.Generic;
-using MongoDB.Bson.Serialization.Attributes;
+using System.Runtime.Serialization;
 
 namespace backend
 {
@@ -11,8 +10,8 @@ namespace backend
     {
         [DataMember(Name = "Id")]
         [BsonElement("Id")]
-        public int Id {get; set;}
-        
+        public int Id { get; set; }
+
         [DataMember(Name = "Board")]
         [BsonElement("Board")]
         public int[][] Board { get; set; }
@@ -35,13 +34,14 @@ namespace backend
 
     [BsonIgnoreExtraElements]
     [DataContract]
-    public class Point {
+    public class Point
+    {
         [DataMember(Name = "x")]
         [BsonElement("x")]
-        public int x {get; set;}
+        public int X { get; set; }
 
         [DataMember(Name = "y")]
         [BsonElement("y")]
-        public int y {get; set;}
+        public int Y { get; set; }
     }
 }
