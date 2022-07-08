@@ -18,14 +18,14 @@
           "image": "dotnet-frontend",
           "containerName": "frontend",
           "sourceFileMap": {
-            "${workspaceFolder}\\src\\frontend": "/src"
+            "${workspaceFolder}\\src\\frontend\\dotnet": "/src"
           }
         },
         {
           "image": "dotnet-backend",
           "containerName": "backend",
           "sourceFileMap": {
-            "${workspaceFolder}\\src\\backend": "/src"
+            "${workspaceFolder}\\src\\backend\\dotnet": "/src"
           }
         }
       ]
@@ -36,7 +36,7 @@
       "request": "attach",
       "language": "NETCore",
       "debugPort": 9229,
-      "localRoot": "${workspaceFolder}/src/frontend",
+      "localRoot": "${workspaceFolder}/src/frontend/dotnet",
       "remoteRoot": "/src",
       "podSelector": {
         "app": "dotnet",
@@ -49,7 +49,7 @@
       "request": "attach",
       "language": "NETCore",
       "debugPort": 9230,
-      "localRoot": "${workspaceFolder}/src/backend",
+      "localRoot": "${workspaceFolder}/src/backend/dotnet",
       "remoteRoot": "/src",
       "podSelector": {
         "app": "dotnet",

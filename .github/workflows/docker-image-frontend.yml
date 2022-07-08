@@ -15,6 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the frontend Docker image
-      run: docker build --file src/frontend/Dockerfile --tag minesweeper/frontend:$(date +%s) src/frontend
+      run: docker build --file src/frontend/dotnet/Dockerfile --tag minesweeper/frontend:$(date +%s) src/frontend/dotnet
     - name: Build the backend Docker image
-      run: docker build --file src/backend/Dockerfile --tag minesweeper/backend:$(date +%s) src/backend
+      run: docker build --file src/backend/dotnet/Dockerfile --tag minesweeper/backend:$(date +%s) src/backend/dotnet

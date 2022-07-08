@@ -7,7 +7,7 @@ name: Docker Publish Frontend
 
 on:
   schedule:
-    - cron: '16 23 * * *'
+    - cron: '16 23 * * SUN'
   push:
     branches: [ "main" ]
     # Publish semver tags as releases.
@@ -72,8 +72,8 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
         with:
-          file: src/frontend/Dockerfile
-          context: src/frontend
+          file: src/frontend/dotnet/Dockerfile
+          context: src/frontend/dotnet
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

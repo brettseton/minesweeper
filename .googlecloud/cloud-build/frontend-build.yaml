@@ -5,9 +5,9 @@ steps:
       - '--no-cache'
       - '-t'
       - '$_IMAGE_NAME:$COMMIT_SHA'
-      - src/frontend
+      - src/frontend/dotnet
       - '-f'
-      - src/frontend/Dockerfile
+      - src/frontend/dotnet/Dockerfile
     id: Build
   - name: gcr.io/cloud-builders/docker
     args:

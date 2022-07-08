@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/src/frontend/frontend.csproj"
+                "${workspaceFolder}/src/frontend/dotnet/frontend.csproj"
             ],
             "problemMatcher": "$tsc"
         },
@@ -17,7 +17,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/src/frontend/frontend.csproj"
+                "${workspaceFolder}/src/frontend/dotnet/frontend.csproj"
             ],
             "problemMatcher": "$tsc"
         },
@@ -28,7 +28,7 @@
             "args": [
                 "watch",
                 "run",
-                "${workspaceFolder}/src/frontend/frontend.csproj"
+                "${workspaceFolder}/src/frontend/dotnet/frontend.csproj"
             ],
             "problemMatcher": "$tsc"
         }
