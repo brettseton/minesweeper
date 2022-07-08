@@ -9,4 +9,4 @@ build:
   local:
     concurrency: 0
 requires:
-  - path: ./dotnet
+  - path: ./dotnet/src

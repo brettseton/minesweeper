@@ -25,7 +25,7 @@
           "image": "dotnet-backend",
           "containerName": "backend",
           "sourceFileMap": {
-            "${workspaceFolder}\\src\\backend\\dotnet": "/src"
+            "${workspaceFolder}\\src\\backend\\dotnet\\src": "/src"
           }
         }
       ]
@@ -49,7 +49,7 @@
       "request": "attach",
       "language": "NETCore",
       "debugPort": 9230,
-      "localRoot": "${workspaceFolder}/src/backend/dotnet",
+      "localRoot": "${workspaceFolder}/src/backend/dotnet/src",
       "remoteRoot": "/src",
       "podSelector": {
         "app": "dotnet",

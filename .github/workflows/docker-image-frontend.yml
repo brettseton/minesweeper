@@ -17,4 +17,4 @@ jobs:
     - name: Build the frontend Docker image
       run: docker build --file src/frontend/dotnet/Dockerfile --tag minesweeper/frontend:$(date +%s) src/frontend/dotnet
     - name: Build the backend Docker image
-      run: docker build --file src/backend/dotnet/Dockerfile --tag minesweeper/backend:$(date +%s) src/backend/dotnet
+      run: docker build --file src/backend/dotnet/src/Dockerfile --tag minesweeper/backend:$(date +%s) src/backend/dotnet/src
