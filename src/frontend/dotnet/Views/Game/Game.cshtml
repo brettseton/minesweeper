@@ -40,7 +40,7 @@
         <div>
             Mines: @(Model.MineCount)
             <br/>
-            Flags: @(Model.FlagPoints.Count())
+            Flags: @(Model?.FlagPoints.Count() ?? 0)
         </div>
         @if (Model.Board.Any(y => y.Any(x => x == -2)))
         {

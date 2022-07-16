@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
+using benchmarks.Benchmarks;
 
 namespace benchmarks
 {
@@ -6,7 +7,8 @@ namespace benchmarks
     {
         public static void Main(string[] args)
         {
-            BenchmarkRunner.Run<GameControllerBenchmarks>();
+            //BenchmarkRunner.Run<GameControllerBenchmarks>();
+            BenchmarkRunner.Run<MinesweeperGameBenchmarks>();
         }
     }
 }

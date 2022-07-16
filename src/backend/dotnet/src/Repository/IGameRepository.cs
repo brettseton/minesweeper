@@ -1,3 +1,5 @@
+using backend.Model;
+
 namespace backend.Repository
 {
     public interface IGameRepository

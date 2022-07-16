@@ -1,3 +1,4 @@
+using backend.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;

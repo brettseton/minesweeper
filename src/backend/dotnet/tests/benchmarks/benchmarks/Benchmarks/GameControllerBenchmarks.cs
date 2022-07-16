@@ -3,7 +3,7 @@ using backend.Repository;
 using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.Logging;
 
-namespace benchmarks
+namespace benchmarks.Benchmarks
 {
     [MemoryDiagnoser]
     public class GameControllerBenchmarks
