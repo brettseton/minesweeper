@@ -99,6 +99,15 @@ namespace backend.Extensions
             return game;
         }
 
+        public static bool IsGameOver(this MinesweeperGame game)
+        {
+            // All moves have been made
+            if (game.Moves.Count + game.MineCount == game.Board.Length * game.Board[0].Length) return true;
+            // A Mine was selected
+            if (game.MinePoints.Intersect(game.Moves).Any()) return true;
+            return false;
+        }
+
         public static MinesweeperGameDto ToGameDto(this MinesweeperGame game)
         {
             var numberOfColumns = game.Board.Length;

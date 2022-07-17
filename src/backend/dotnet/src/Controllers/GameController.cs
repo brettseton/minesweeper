@@ -26,7 +26,7 @@ namespace backend.Controllers
         [HttpGet("{id?}")]
         public ActionResult<MinesweeperGameDto> Get(int? id)
         {
-            if ((id ?? 0) == 0) return RedirectToAction("NewGame");
+            if ((id ?? 0) == 0) return NewGame();
             _logger.LogInformation($"Getting game {id}");
             var game = _repository.GetGame(id ?? 0);
             if (game == null)
@@ -56,9 +56,9 @@ namespace backend.Controllers
         {
             _logger.LogInformation("Called with input:{0}", point);
             var game = _repository.GetGame(id);
-            if (game.Moves != null && game.Moves.Contains(point)) return game.ToGameDto();
-            if (game.Moves != null && game.MinePoints.Intersect(game.Moves).Any()) return game.ToGameDto();
-            if (game.Moves != null && game.FlagPoints.Contains(point)) return game.ToGameDto();
+            if (game.IsGameOver()) return Ok(game.ToGameDto());
+            if (game.Moves != null && game.Moves.Contains(point)) return Ok(game.ToGameDto());
+            if (game.Moves != null && game.FlagPoints.Contains(point)) return Ok(game.ToGameDto());
 
             // 0 square needs to reveal the area it is in
             if (game.Board[point.X][point.Y] == BoardState.ZERO)
@@ -71,18 +71,17 @@ namespace backend.Controllers
             return Ok(_repository.AddMoves(id, new Point[] { point }).ToGameDto());
         }
 
-        // POST api/values
+        // Toggle Flag
         [HttpPost("flag/{id}")]
         public ActionResult<MinesweeperGameDto> ToggleFlag([FromRoute] int id, [FromBody] Point point)
         {
             _logger.LogInformation("Called with input:{0}", point);
             var game = _repository.GetGame(id);
+            if (game.IsGameOver())
+                return Ok(game.ToGameDto());
             if (game.FlagPoints != null && game.FlagPoints.Contains(point))
                 return Ok(_repository.RemoveFlag(id, point).ToGameDto());
             return Ok(_repository.AddFlag(id, point).ToGameDto());
         }
-
-
-
     }
 }

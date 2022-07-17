@@ -40,8 +40,6 @@ namespace benchmarks.Benchmarks
             var game = oneMine1000x1000.GetZeroMoves(new Point() { X = 2, Y = 2 });
         }
 
-
-
         private readonly MinesweeperGame oneMine10x10 = new MinesweeperGame()
         {
             Id = 1,
