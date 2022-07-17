@@ -10,13 +10,13 @@ namespace benchmarks.Benchmarks
         [Benchmark]
         public void GetNewGame()
         {
-            var game = (new MinesweeperGame()).GetNewGame();
+            var game = new MinesweeperGame().GetNewGame();
         }
 
         [Benchmark]
         public void GetNewGame_100x100()
         {
-            var game = (new MinesweeperGame()).GetNewGame(100, 100, 1000);
+            var game = new MinesweeperGame().GetNewGame(100, 100, 1000);
         }
 
         [Benchmark]
@@ -40,7 +40,7 @@ namespace benchmarks.Benchmarks
             var game = oneMine1000x1000.GetZeroMoves(new Point() { X = 2, Y = 2 });
         }
 
-        private readonly MinesweeperGame oneMine10x10 = new MinesweeperGame()
+        private readonly MinesweeperGame oneMine10x10 = new()
         {
             Id = 1,
             Board = Enumerable.Range(0, 10).Select(y =>
@@ -53,7 +53,7 @@ namespace benchmarks.Benchmarks
             FlagPoints = new HashSet<Point>()
         };
 
-        private readonly MinesweeperGame oneMine100x100 = new MinesweeperGame()
+        private readonly MinesweeperGame oneMine100x100 = new()
         {
             Id = 1,
             Board = Enumerable.Range(0, 100).Select(y =>
@@ -66,7 +66,7 @@ namespace benchmarks.Benchmarks
             FlagPoints = new HashSet<Point>()
         };
 
-        private readonly MinesweeperGame oneMine1000x1000 = new MinesweeperGame()
+        private readonly MinesweeperGame oneMine1000x1000 = new()
         {
             Id = 1,
             Board = Enumerable.Range(0, 1000).Select(y =>

@@ -1,8 +1,8 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace backend.Model
 {
@@ -79,7 +79,7 @@ namespace backend.Model
 
         public override int GetHashCode()
         {
-            return X*31 ^ Y*411;
+            return (X * 31) ^ (Y * 411);
         }
     }
 }

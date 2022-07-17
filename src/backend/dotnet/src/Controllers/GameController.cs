@@ -45,7 +45,7 @@ namespace backend.Controllers
         public ActionResult<MinesweeperGameDto> New([FromRoute] int numberOfColumns = 10, [FromRoute] int numberOfRows = 10, [FromRoute] int numberOfMines = 10)
         {
             _logger.LogInformation($"Creating new game");
-            var game = (new MinesweeperGame()).GetNewGame(numberOfColumns, numberOfRows, numberOfMines);
+            var game = new MinesweeperGame().GetNewGame(numberOfColumns, numberOfRows, numberOfMines);
             _repository.Save(game);
             return Ok(game.ToGameDto());
         }

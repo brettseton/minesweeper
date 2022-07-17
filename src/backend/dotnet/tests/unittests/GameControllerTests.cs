@@ -111,7 +111,7 @@ namespace unittests
             var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
             var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
             var numberedPoints = GetAllNumberPoints(repositoryGame.Board);
-            foreach(var numberPoint in numberedPoints)
+            foreach (var numberPoint in numberedPoints)
             {
                 _gameController.Post(newGame.Id, numberPoint);
             }
@@ -130,7 +130,7 @@ namespace unittests
             var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
             var minePoint = GetMinePoint(repositoryGame.Board);
             var gameOver = GetGameFromActionResult(_gameController.Post(newGame.Id, minePoint));
-            
+
             var numberedPoint = GetNumberPoint(repositoryGame.Board);
             var game = GetGameFromActionResult(_gameController.ToggleFlag(newGame.Id, numberedPoint));
 
@@ -177,7 +177,7 @@ namespace unittests
             return board.Select((column, xIndex) =>
                             column.Select((cell, yIndex) => new Point(xIndex, yIndex))
                                   .FirstOrDefault(cell => board[cell.X][cell.Y] != BoardState.MINE && board[cell.X][cell.Y] != BoardState.ZERO))
-                        .First(x => x != null);
+                        .First(x => x != null) ?? new Point(-1, -1);
         }
 
         private static IEnumerable<Point> GetAllNumberPoints(BoardState[][] board)
@@ -190,10 +190,10 @@ namespace unittests
 
         private static Point GetMinePoint(BoardState[][] board)
         {
-            return board.Select((column, xIndex) => 
+            return board.Select((column, xIndex) =>
                             column.Select((cell, yIndex) => new Point(xIndex, yIndex))
                                   .FirstOrDefault(cell => board[cell.X][cell.Y] == BoardState.MINE))
-                        .First(x => x != null);
+                        .First(x => x != null) ?? new Point(-1, -1);
         }
 
         private static MinesweeperGameDto GetGameFromActionResult(ActionResult<MinesweeperGameDto> actionResult)
@@ -202,7 +202,7 @@ namespace unittests
             Assert.IsType<OkObjectResult>(actionResult?.Result);
             var game = (actionResult?.Result as OkObjectResult)?.Value as MinesweeperGameDto;
             Assert.NotNull(game);
-            return game;
+            return game ?? new MinesweeperGameDto();
         }
     }
 }
