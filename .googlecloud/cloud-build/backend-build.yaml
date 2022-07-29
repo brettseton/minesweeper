@@ -4,7 +4,10 @@ steps:
     entrypoint: 'bash'
     args:
       - '-c'
-      - dotnet test --no-build src/backend/dotnet/tests/unittests/unittests.csproj
+      - |
+        dotnet restore src/backend/dotnet/tests/unittests/unittests.csproj
+        dotnet build --no-restore src/backend/dotnet/tests/unittests/unittests.csproj
+        dotnet test --no-build --verbosity normal src/backend/dotnet/tests/unittests/unittests.csproj
   - name: gcr.io/cloud-builders/docker
     args:
       - build
