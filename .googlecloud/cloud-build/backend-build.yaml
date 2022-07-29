@@ -1,4 +1,10 @@
 steps:
+
+  - name: "gcr.io/cloud-builders/dotnet"
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - dotnet test --no-build src/backend/dotnet/tests/unittests/unittests.csproj
   - name: gcr.io/cloud-builders/docker
     args:
       - build
