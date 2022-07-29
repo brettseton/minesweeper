@@ -1,28 +1,43 @@
-using backend.Controllers;
 using backend.Model;
 using backend.Repository;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace unittests
 {
-    public class GameControllerTests
+    public class MongoGameControllerTests : ControllerTestsBase, IClassFixture<MongoDBWebApiFactory>
     {
-        private readonly InMemoryGameRepository _inMemoryRepository;
-        private readonly GameController _gameController;
-
-        public GameControllerTests()
+        public MongoGameControllerTests(MongoDBWebApiFactory apiFactory) : base(apiFactory.CreateClient(), apiFactory.Services.GetRequiredService<IGameRepository>())
         {
-            _inMemoryRepository = new InMemoryGameRepository(new LoggerFactory());
-            _gameController = new GameController(new LoggerFactory(), _inMemoryRepository);
+        }
+    }
+
+    public class InMemoryGameControllerTests : ControllerTestsBase, IClassFixture<InMemoryWebApiFactory>
+    {
+        public InMemoryGameControllerTests(InMemoryWebApiFactory apiFactory) : base(apiFactory.CreateClient(), apiFactory.Services.GetRequiredService<IGameRepository>())
+        {
+        }
+    }
+
+    public abstract class ControllerTestsBase
+    {
+        private readonly HttpClient _client;
+        private readonly IGameRepository _repository;
+
+        public ControllerTestsBase(HttpClient client, IGameRepository repository)
+        {
+            _client = client;
+            _repository = repository;
         }
 
         [Fact]
-        public void CreateNewGame_MatchesGetCall()
+        public async Task CreateNewGame_MatchesGetCallAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 100, 10));
-            var game = GetGameFromActionResult(_gameController.Get(newGame.Id));
-            AssertGameDtosAreEqual(newGame, game);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/100/10");
+            var game = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
+
+            newGame.Should().BeEquivalentTo(game);
 
             Assert.Equal(10, newGame.Board.Length);
             for (var x = 0; x < newGame.Board.Length; x++)
@@ -36,50 +51,53 @@ namespace unittests
         }
 
         [Fact]
-        public void ToggleFlagOnAndOff_ReturnsCorrectBoardState()
+        public async Task ToggleFlagOnAndOff_ReturnsCorrectBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 10));
-            var game = GetGameFromActionResult(_gameController.ToggleFlag(newGame.Id, new Point(0, 0)));
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/10");
+
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", new Point(0, 0));
+
             Assert.Equal(BoardState.FLAG, game.Board[0][0]);
             Assert.Single(game.FlagPoints);
-            game = GetGameFromActionResult(_gameController.ToggleFlag(game.Id, new Point(0, 0)));
+            game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", new Point(0, 0));
             for (var x = 0; x < game.Board.Length; x++)
                 for (var y = 0; y < game.Board[0].Length; y++)
                     Assert.Equal(BoardState.UNKNOWN, game.Board[x][y]);
         }
 
         [Fact]
-        public void ClickOnFlag_ReturnsCorrectBoardState()
+        public async Task ClickOnFlag_ReturnsCorrectBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var numberedPoint = GetNumberPoint(repositoryGame.Board);
 
-            var gameFlagToggled = GetGameFromActionResult(_gameController.ToggleFlag(newGame.Id, numberedPoint));
-            var game = GetGameFromActionResult(_gameController.Post(newGame.Id, numberedPoint));
+            var gameFlagToggled = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", numberedPoint);
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
 
-            AssertGameDtosAreEqual(gameFlagToggled, game);
+            gameFlagToggled.Should().BeEquivalentTo(game);
         }
 
         [Fact]
-        public void MoveOnNumberedSpace_ReturnsCorrectBoardState()
+        public async Task MoveOnNumberedSpace_ReturnsCorrectBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var numberedPoint = GetNumberPoint(repositoryGame.Board);
 
-            var game = GetGameFromActionResult(_gameController.Post(newGame.Id, numberedPoint));
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
             Assert.InRange(game.Board[numberedPoint.X][numberedPoint.Y], BoardState.ONE, BoardState.EIGHT);
         }
 
         [Fact]
-        public void MoveOnMineSpace_ReturnsCorrectBoardState()
+        public async Task MoveOnMineSpace_ReturnsCorrectBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var minePoint = GetMinePoint(repositoryGame.Board);
 
-            var game = GetGameFromActionResult(_gameController.Post(newGame.Id, new Point(minePoint.X, minePoint.Y)));
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
             Assert.Equal(BoardState.MINE, game.Board[minePoint.X][minePoint.Y]);
             foreach (var mine in repositoryGame.MinePoints)
@@ -89,87 +107,70 @@ namespace unittests
         }
 
         [Fact]
-        public void MoveAfterGameOver_DoesntChangeBoardState()
+        public async Task MoveAfterGameOver_DoesntChangeBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var minePoint = GetMinePoint(repositoryGame.Board);
 
-            var gameOver = GetGameFromActionResult(_gameController.Post(newGame.Id, minePoint));
+            var gameOver = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
             var numberedPoint = GetNumberPoint(repositoryGame.Board);
 
-            var game = GetGameFromActionResult(_gameController.Post(newGame.Id, numberedPoint));
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
 
-            AssertGameDtosAreEqual(gameOver, game);
+            gameOver.Should().BeEquivalentTo(game);
 
         }
 
         [Fact]
-        public void MoveAfterVictory_DoesntChangeBoardState()
+        public async Task MoveAfterVictory_DoesntChangeBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var numberedPoints = GetAllNumberPoints(repositoryGame.Board);
-            foreach (var numberPoint in numberedPoints)
+            foreach (var numberedPoint in numberedPoints)
             {
-                _gameController.Post(newGame.Id, numberPoint);
+                await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
             }
-            var victoryGame = GetGameFromActionResult(_gameController.Get(newGame.Id));
+            var victoryGame = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
 
             var minePoint = GetMinePoint(repositoryGame.Board);
-            var game = GetGameFromActionResult(_gameController.Post(newGame.Id, minePoint));
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
-            AssertGameDtosAreEqual(victoryGame, game);
+            victoryGame.Should().BeEquivalentTo(game);
         }
 
         [Fact]
-        public void ToggleFlagAfterGameOver_DoesntChangeBoardState()
+        public async Task ToggleFlagAfterGameOver_DoesntChangeBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var minePoint = GetMinePoint(repositoryGame.Board);
-            var gameOver = GetGameFromActionResult(_gameController.Post(newGame.Id, minePoint));
+            var gameOver = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
             var numberedPoint = GetNumberPoint(repositoryGame.Board);
-            var game = GetGameFromActionResult(_gameController.ToggleFlag(newGame.Id, numberedPoint));
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
 
-            AssertGameDtosAreEqual(gameOver, game);
+            gameOver.Should().BeEquivalentTo(game);
         }
 
         [Fact]
-        public void ToggleFlagAfterVictory_DoesntChangeBoardState()
+        public async Task ToggleFlagAfterVictory_DoesntChangeBoardStateAsync()
         {
-            var newGame = GetGameFromActionResult(_gameController.New(10, 10, 5));
-            var repositoryGame = _inMemoryRepository.GetGame(newGame.Id);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
             var numberedPoints = GetAllNumberPoints(repositoryGame.Board);
-            foreach (var numberPoint in numberedPoints)
+            foreach (var numberedPoint in numberedPoints)
             {
-                _gameController.Post(newGame.Id, numberPoint);
+                await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
             }
-            var victoryGame = GetGameFromActionResult(_gameController.Get(newGame.Id));
+            var victoryGame = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
 
             var minePoint = GetMinePoint(repositoryGame.Board);
-            var game = GetGameFromActionResult(_gameController.ToggleFlag(newGame.Id, minePoint));
+            var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", minePoint);
 
-            AssertGameDtosAreEqual(victoryGame, game);
-        }
-
-        private static void AssertGameDtosAreEqual(MinesweeperGameDto expected, MinesweeperGameDto actual)
-        {
-            Assert.Equal(expected.Id, actual.Id);
-            Assert.Equal(expected.MineCount, actual.MineCount);
-            Assert.Equal(expected.FlagPoints, actual.FlagPoints);
-            Assert.NotNull(expected.Board);
-            Assert.NotNull(actual.Board);
-            Assert.Equal(expected.Board.Length, actual.Board.Length);
-            Assert.Equal(expected.FlagPoints, actual.FlagPoints);
-            for (var x = 0; x < expected.Board.Length; x++)
-            {
-                Assert.Equal(expected.Board[x].Length, actual.Board[x].Length);
-                for (var y = 0; y < expected.Board[0].Length; y++)
-                    Assert.Equal(expected.Board[x][y], actual.Board[x][y]);
-            }
+            victoryGame.Should().BeEquivalentTo(game);
         }
 
         private static Point GetNumberPoint(BoardState[][] board)
