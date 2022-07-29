@@ -1,6 +1,6 @@
 steps:
 
-  - name: "gcr.io/cloud-builders/dotnet"
+  - name: "microsoft/dotnet:sdk6.0"
     entrypoint: 'bash'
     args:
       - '-c'
