@@ -42,13 +42,13 @@ jobs:
           dotnet-version: 6.0.x
 
       - name: Restore dependencies
-        run: dotnet restore src\backend\dotnet\tests\unittests\unittests.csproj
+        run: dotnet restore src/backend/dotnet/tests/unittests/unittests.csproj
 
       - name: Build
-        run: dotnet build --no-restore src\backend\dotnet\tests\unittests\unittests.csproj
+        run: dotnet build --no-restore src/backend/dotnet/tests/unittests/unittests.csproj
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal src\backend\dotnet\tests\unittests\unittests.csproj
+        run: dotnet test --no-build --verbosity normal src/backend/dotnet/tests/unittests/unittests.csproj
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
