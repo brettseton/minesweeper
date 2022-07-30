@@ -1,6 +1,6 @@
 steps:
 
-  - name: "mcr.microsoft.com/dotnet/sdk"
+  - name: mcr.microsoft.com/dotnet/sdk:6.0
     entrypoint: 'bash'
     args:
       - '-c'
