@@ -1,4 +1,4 @@
-name: Docker Publish Frontend
+name: Docker Publish Backend
 
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
@@ -19,7 +19,7 @@ env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ github.repository }}/frontend/dotnet
+  IMAGE_NAME: ${{ github.repository }}/frontend/angular
 
 jobs:
   build:
@@ -72,8 +72,8 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
         with:
-          file: src/frontend/dotnet/Dockerfile
-          context: src/frontend/dotnet
+          file: src/frontend/angular/Dockerfile
+          context: src/frontend/angular
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
