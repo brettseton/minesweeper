@@ -36,15 +36,3 @@ spec:
           value: "8080"
         - name: BACKEND_API_ADDR
           value: dotnet-backend
-        volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/templates/default.conf.template
-          subPath: default.conf.template
-          readOnly: true
-      volumes:
-      - name: nginx-conf
-        configMap:
-          name: nginx-conf
-          items:
-            - key: default.conf.template
-              path: default.conf.template

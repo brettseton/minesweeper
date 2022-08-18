@@ -40,7 +40,7 @@ substitutions:
   _PLATFORM: managed
   _LABELS: gcb-trigger-id=4f4def75-2065-480d-bce7-633339f6275b
   _TRIGGER_ID: 4f4def75-2065-480d-bce7-633339f6275b
-  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/frontend
+  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/frontend/dotnet
 tags:
   - gcp-cloud-build-deploy-cloud-run
   - gcp-cloud-build-deploy-cloud-run-managed
