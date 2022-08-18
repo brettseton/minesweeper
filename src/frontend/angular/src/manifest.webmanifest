@@ -1,0 +1,83 @@
+{
+  "name": "angular",
+  "short_name": "angular",
+  "theme_color": "#1976d2",
+  "background_color": "#fafafa",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./",
+  "icons": [
+    {
+      "src": "assets/svg/mine.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/unknown.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/flag.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/0.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/1.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/2.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/3.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/4.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/5.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/6.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/7.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/svg/8.svg",
+      "sizes": "16x16",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ]
+}

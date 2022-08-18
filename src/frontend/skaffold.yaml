@@ -10,3 +10,4 @@ build:
     concurrency: 0
 requires:
   - path: ./dotnet
+  - path: ./angular

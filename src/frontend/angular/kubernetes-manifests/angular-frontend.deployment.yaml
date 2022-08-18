@@ -1,0 +1,50 @@
+﻿# This Deployment manifest defines:
+# - single-replica deployment of the container image, with label "app: angular-frontend"
+# - Pod exposes port 8808
+# - specify PORT environment variable to the container process
+# Syntax reference https://kubernetes.io/docs/concepts/configuration/overview/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-frontend
+  labels:
+    app: angular
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: angular
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: angular
+        tier: frontend
+    spec:
+      containers:
+      - name: angular-frontend
+        image: angular-frontend
+        ports:
+        - name: http-server
+          containerPort: 80
+          #containerPort: 4200
+        - name: debug
+          containerPort: 9228
+        env:
+        - name: BACKEND_PORT
+          value: "8080"
+        - name: BACKEND_API_ADDR
+          value: dotnet-backend
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/templates/default.conf.template
+          subPath: default.conf.template
+          readOnly: true
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx-conf
+          items:
+            - key: default.conf.template
+              path: default.conf.template

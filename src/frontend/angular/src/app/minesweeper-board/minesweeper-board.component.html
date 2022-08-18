@@ -1,0 +1,9 @@
+
+<p *ngIf="!minesweeperGame"><em>Loading...</em></p>
+
+<p><button [routerLink]="'/minesweeper/0'">New Game</button></p>
+<p>Game Id: {{ minesweeperGame?.id ?? 0 }}</p>
+<p>Mines: {{ minesweeperGame?.mineCount ?? 0 }}</p>
+<p>Flags: {{ minesweeperGame?.flagPoints?.length ?? 0}}</p>
+
+<canvas id="canvas" width="420px" height="420px" style="background: #fff; margin:20px" #canvas></canvas>
