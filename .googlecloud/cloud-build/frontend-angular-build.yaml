@@ -1,0 +1,48 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - '--no-cache'
+      - '-t'
+      - '$_IMAGE_NAME:$COMMIT_SHA'
+      - src/frontend/angular
+      - '-f'
+      - src/frontend/angular/Dockerfile
+    id: Build
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - '$_IMAGE_NAME:$COMMIT_SHA'
+    id: Push
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
+      - '--platform=managed'
+      - '--image=$_IMAGE_NAME:$COMMIT_SHA'
+      - >-
+        --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID,$_LABELS
+      - '--region=$_DEPLOY_REGION'
+      - '--quiet'
+    id: Deploy
+    entrypoint: gcloud
+images:
+  - '$_IMAGE_NAME:$COMMIT_SHA'
+options:
+  substitutionOption: ALLOW_LOOSE
+  dynamic_substitutions: true
+substitutions:
+  _SERVICE_NAME: minesweeper
+  _DEPLOY_REGION: us-central1
+  _GCR_HOSTNAME: us.gcr.io
+  _PLATFORM: managed
+  _LABELS: gcb-trigger-id=4f4def75-2065-480d-bce7-633339f6275b
+  _TRIGGER_ID: 4f4def75-2065-480d-bce7-633339f6275b
+  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/frontend/angular
+tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+  - minesweeper-frontend
+  - angular
