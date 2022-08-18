@@ -10,10 +10,17 @@
       "request": "launch",
       "skaffoldConfig": "${workspaceFolder}/skaffold.yaml",
       "watch": true,
-      "cleanUp": false,
+      "cleanUp": true,
       "portForward": true,
       "internalConsoleOptions": "neverOpen",
       "debug": [
+        {
+          "image": "angular-frontend",
+          "containerName": "angular-frontend",
+          "sourceFileMap": {
+            "${workspaceFolder}\\src\\frontend\\angular": "/src"
+          }
+        },
         {
           "image": "dotnet-frontend",
           "containerName": "frontend",
@@ -40,6 +47,19 @@
       "remoteRoot": "/src",
       "podSelector": {
         "app": "dotnet",
+        "tier": "frontend"
+      }
+    },
+    {
+      "name": "Attach to Kubernetes pod (angular-frontend)",
+      "type": "cloudcode.kubernetes",
+      "request": "attach",
+      "language": "Node",
+      "debugPort": 9228,
+      "localRoot": "${workspaceFolder}/src/frontend/angular",
+      "remoteRoot": "/src",
+      "podSelector": {
+        "app": "angular",
         "tier": "frontend"
       }
     },
