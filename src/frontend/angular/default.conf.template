@@ -15,7 +15,7 @@
 
         location /game/ {
         #proxy_pass http://dotnet-backend:8080/game/;
-        proxy_pass http://${BACKEND_API_ADDR}:${BACKEND_PORT}/game/;
+        proxy_pass https://${BACKEND_API_ADDR}:${BACKEND_PORT}/game/;
         }
     }
 
