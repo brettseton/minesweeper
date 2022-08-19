@@ -18,4 +18,19 @@
         proxy_pass http://${BACKEND_API_ADDR}:${BACKEND_PORT}/game/;
         }
     }
+
+    server {
+        listen       443;
+        server_name  localhost;
+        location / {
+        root   /usr/share/nginx/html;
+        try_files $uri$args $uri$args/ /index.html;
+        include  /etc/nginx/mime.types;
+        }
+
+        location /game/ {
+        #proxy_pass https://dotnet-backend:8080/game/;
+        proxy_pass https://${BACKEND_API_ADDR}:${BACKEND_PORT}/game/;
+        }
+    }
 #}
