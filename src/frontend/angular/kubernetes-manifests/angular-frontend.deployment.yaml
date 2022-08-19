@@ -28,7 +28,6 @@ spec:
         ports:
         - name: http-server
           containerPort: 80
-          #containerPort: 4200
         - name: debug
           containerPort: 9228
         env:
@@ -36,3 +35,5 @@ spec:
           value: "8080"
         - name: BACKEND_API_ADDR
           value: dotnet-backend
+        - name: BACKEND_HTTP_SCHEME
+          value: "http"
