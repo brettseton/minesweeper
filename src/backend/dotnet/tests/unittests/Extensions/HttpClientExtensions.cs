@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
+using unittests.Extensions;
 
-namespace unittests
+namespace unittests.Extensions
 {
     public static class HttpClientExtensions
     {
@@ -8,13 +9,15 @@ namespace unittests
         public static async Task<T> GetAsync<T>(this HttpClient client, string requestUri)
         {
             var response = await client.GetAsync(requestUri);
-            return await response.Content.ReadFromJsonAsync<T>();
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<T>() ?? throw new Exception("Response Content is null");
         }
 
         public static async Task<TResponse> PostAsJsonAsync<TValue, TResponse>(this HttpClient client, string requestUri, TValue value)
         {
             var response = await client.PostAsJsonAsync(requestUri, value);
-            return await response.Content.ReadFromJsonAsync<TResponse>();
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<TResponse>() ?? throw new Exception("Response Content is null");
         }
 
     }

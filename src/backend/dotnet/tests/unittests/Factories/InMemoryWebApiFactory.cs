@@ -1,12 +1,14 @@
 ﻿using backend.Controllers;
 using backend.Repository;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using unittests.Authentication;
 
-namespace unittests
+namespace unittests.Factories
 {
     public class InMemoryWebApiFactory : WebApplicationFactory<GameController>
     {
@@ -16,6 +18,8 @@ namespace unittests
             {
                 services.RemoveAll(typeof(IGameRepository));
                 services.AddSingleton<IGameRepository, InMemoryGameRepository>();
+                services.AddAuthentication("Test")
+                        .AddScheme<AuthenticationSchemeOptions, AuthenticationTestHandler>("Test", null);
             });
         }
     }

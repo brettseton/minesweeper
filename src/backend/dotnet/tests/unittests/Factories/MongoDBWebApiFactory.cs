@@ -4,14 +4,16 @@ using backend.Repository;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using unittests.Authentication;
 
-namespace unittests
+namespace unittests.Factories
 {
     public class MongoDBWebApiFactory : WebApplicationFactory<GameController>, IAsyncLifetime
     {
@@ -38,6 +40,8 @@ namespace unittests
                 services.RemoveAll(typeof(IGameRepository));
                 services.Configure<MongoConfig>(c => c.DatabaseAddress = _dbContainer.ConnectionString);
                 services.AddSingleton<IGameRepository, GameRepository>();
+                services.AddAuthentication("Test")
+                        .AddScheme<AuthenticationSchemeOptions, AuthenticationTestHandler>("Test", null);
             });
         }
 

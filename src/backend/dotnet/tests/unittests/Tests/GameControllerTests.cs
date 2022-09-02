@@ -3,8 +3,10 @@ using backend.Repository;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using unittests.Extensions;
+using unittests.Factories;
 
-namespace unittests
+namespace unittests.Tests
 {
     public class MongoGameControllerTests : ControllerTestsBase, IClassFixture<MongoDBWebApiFactory>
     {

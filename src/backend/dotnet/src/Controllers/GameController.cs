@@ -2,6 +2,7 @@
 using backend.Extensions;
 using backend.Model;
 using backend.Repository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +10,7 @@ namespace backend.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class GameController : ControllerBase
     {
         private readonly ILogger _logger;

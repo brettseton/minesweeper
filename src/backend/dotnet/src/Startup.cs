@@ -1,11 +1,11 @@
 ﻿using System;
 using backend.Repository;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace backend
 {
@@ -28,6 +28,21 @@ namespace backend
             var port = Environment.GetEnvironmentVariable("PORT");
 
             services.AddControllers();
+            if (Configuration["Authentication:Google:ClientId"] != null)
+            {
+                services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                    .AddCookie(o =>
+                    {
+                        o.LoginPath = "/account/google-login";
+                    })
+                    .AddGoogle(o =>
+                    {
+                        o.ClientId = Configuration["Authentication:Google:ClientId"];
+                        o.ClientSecret = Configuration["Authentication:Google:ClientSecret"];
+                    });
+            }
+
+            services.AddAuthorization();
 
             if (string.IsNullOrEmpty(port) || string.IsNullOrEmpty(databaseAddr))
             {
@@ -50,6 +65,8 @@ namespace backend
             }
 
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
