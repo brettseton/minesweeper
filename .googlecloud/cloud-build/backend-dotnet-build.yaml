@@ -43,15 +43,17 @@ options:
   substitutionOption: ALLOW_LOOSE
   dynamic_substitutions: true
 substitutions:
-  _SERVICE_NAME: minesweeper
-  _CLOUD_SERVICE_NAME: minesweeper-backend
+  _SERVICE_NAME: minesweeper-backend-dotnet
+  _CLOUD_SERVICE_NAME: minesweeper-backend-dotnet
   _DEPLOY_REGION: us-central1
   _GCR_HOSTNAME: us.gcr.io
   _PLATFORM: managed
-  _LABELS: gcb-trigger-id=4f4def75-2065-480d-bce7-633339f6275b
-  _TRIGGER_ID: 4f4def75-2065-480d-bce7-633339f6275b
-  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/backend
+  _LABELS: gcb-trigger-id=f697ef06-e6e5-4930-b22b-d50ce1514a05
+  _TRIGGER_ID: f697ef06-e6e5-4930-b22b-d50ce1514a05
+  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/minesweeper/backend/dotnet
 tags:
   - gcp-cloud-build-deploy-cloud-run
   - gcp-cloud-build-deploy-cloud-run-managed
-  - minesweeper-backend
+  - minesweeper
+  - dotnet
+  - backend

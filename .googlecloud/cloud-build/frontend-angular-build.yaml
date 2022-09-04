@@ -34,15 +34,16 @@ options:
   substitutionOption: ALLOW_LOOSE
   dynamic_substitutions: true
 substitutions:
-  _SERVICE_NAME: minesweeper
+  _SERVICE_NAME: minesweeper-frontend-angular
   _DEPLOY_REGION: us-central1
   _GCR_HOSTNAME: us.gcr.io
   _PLATFORM: managed
   _LABELS: gcb-trigger-id=75617c0f-4450-410b-a22a-af5c62a17bc8
   _TRIGGER_ID: 75617c0f-4450-410b-a22a-af5c62a17bc8
-  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/${_SERVICE_NAME}/frontend/angular
+  _IMAGE_NAME: ${_GCR_HOSTNAME}/${PROJECT_ID}/${REPO_NAME}/minesweeper/frontend/angular
 tags:
   - gcp-cloud-build-deploy-cloud-run
   - gcp-cloud-build-deploy-cloud-run-managed
-  - minesweeper-frontend
+  - minesweeper
   - angular
+  - frontend
