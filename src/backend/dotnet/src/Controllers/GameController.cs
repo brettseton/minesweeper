@@ -10,7 +10,7 @@ namespace backend.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class GameController : ControllerBase
     {
         private readonly ILogger _logger;
