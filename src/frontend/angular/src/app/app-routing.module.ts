@@ -6,6 +6,7 @@ import { LoginComponent } from './login/login.component';
 import { HistoryComponent } from './history/history.component';
 import { StatsComponent } from './stats/stats.component';
 import { MinesweeperBoardComponent } from './minesweeper-board/minesweeper-board.component';
+import { PrivacyComponent } from './privacy/privacy.component';
 import { AuthGuard } from './auth.guard';
 
 const routes: Routes = [
@@ -15,6 +16,7 @@ const routes: Routes = [
   { path: 'stats', component: StatsComponent, canActivate: [AuthGuard] },
   { path: 'minesweeper', component: MinesweeperBoardComponent },
   { path: 'minesweeper/:id', component: MinesweeperBoardComponent },
+  { path: 'privacy', component: PrivacyComponent },
   
   // External redirects handled via a guard-like function
   { 

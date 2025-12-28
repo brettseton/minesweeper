@@ -13,6 +13,7 @@ import { environment } from '../environments/environment';
 import { LoginComponent } from './login/login.component';
 import { HistoryComponent } from './history/history.component';
 import { StatsComponent } from './stats/stats.component';
+import { PrivacyComponent } from './privacy/privacy.component';
 import { AppRoutingModule } from './app-routing.module';
 
 @NgModule({
@@ -24,7 +25,8 @@ import { AppRoutingModule } from './app-routing.module';
     MinesweeperBoardComponent,
     LoginComponent,
     HistoryComponent,
-    StatsComponent
+    StatsComponent,
+    PrivacyComponent
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
