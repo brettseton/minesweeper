@@ -41,7 +41,7 @@ namespace dotnet
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app,  IWebHostEnvironment env, ILogger<Startup> logger)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
             // API_ADDR environment variable is provided in frontend.deployment.yaml.
             var backendAddr = Environment.GetEnvironmentVariable("BACKEND_API_ADDR");
@@ -84,7 +84,7 @@ namespace dotnet
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}");
-                
+
                 endpoints.MapControllerRoute(
                     name: "game",
                     pattern: "{controller=Game}/{action=Game}/{id?}");

@@ -28,7 +28,7 @@ namespace backend
 
             services.AddCors();
             services.AddControllers();
-            
+
             if (!string.IsNullOrEmpty(Configuration["Authentication:Google:ClientId"]))
             {
                 services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -71,14 +71,14 @@ namespace backend
                 var mongoAddr = $"mongodb://{databaseAddr}";
                 services.Configure<MongoConfig>(c => c.DatabaseAddress = mongoAddr);
 
-                services.AddSingleton<MongoDB.Driver.IMongoClient>(s => 
+                services.AddSingleton<MongoDB.Driver.IMongoClient>(s =>
                 {
                     var settings = MongoDB.Driver.MongoClientSettings.FromUrl(new MongoDB.Driver.MongoUrl(mongoAddr));
                     settings.ConnectTimeout = TimeSpan.FromSeconds(2);
                     settings.ServerSelectionTimeout = TimeSpan.FromSeconds(2);
                     return new MongoDB.Driver.MongoClient(settings);
                 });
-                
+
                 services.AddScoped(s => s.GetRequiredService<MongoDB.Driver.IMongoClient>().GetDatabase("MinesweeperGame"));
                 services.AddScoped<IGameRepository, GameRepository>();
                 services.AddScoped<IUserGameRepository, UserGameRepository>();
@@ -107,7 +107,7 @@ namespace backend
 
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
             app.UseRouting();
-            
+
             app.UseAuthentication();
             app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseAuthorization();

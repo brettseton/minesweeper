@@ -23,11 +23,11 @@ namespace backend.Repository
         public void AddMapping(string userId, int gameId)
         {
             _logger.LogInformation($"Adding mapping for user {userId} to game {gameId}");
-            var mapping = new UserGameMapping 
-            { 
-                Id = $"{userId}_{gameId}", 
-                UserId = userId, 
-                GameId = gameId 
+            var mapping = new UserGameMapping
+            {
+                Id = $"{userId}_{gameId}",
+                UserId = userId,
+                GameId = gameId
             };
             _mappings.ReplaceOne(x => x.Id == mapping.Id, mapping, new ReplaceOptions { IsUpsert = true });
         }

@@ -46,7 +46,8 @@ namespace dotnet.Controllers
                 _logger.LogInformation("Got response: {0}", response);
                 response.EnsureSuccessStatusCode();
                 var game = await response.Content.ReadAsAsync<MinesweeperGame>();
-                if (game.Id == id) {
+                if (game.Id == id)
+                {
                     return View(game);
                 }
                 return Redirect($"~/game/{game.Id}");
@@ -68,7 +69,7 @@ namespace dotnet.Controllers
             {
                 var httpClient = _factory.CreateClient();
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    
+
                 _logger.LogInformation($"Making a request to {_envConfig.BackendGameAddress}/new");
                 var response = await httpClient.GetAsync($"{_envConfig.BackendGameAddress}/new");
                 _logger.LogInformation("Got response: {0}", response);

@@ -42,7 +42,7 @@ namespace unittests.Factories
 
                 var client = new MongoDB.Driver.MongoClient(_dbContainer.ConnectionString);
                 var database = client.GetDatabase("MinesweeperGame");
-                
+
                 services.AddSingleton<MongoDB.Driver.IMongoClient>(client);
                 services.AddSingleton<MongoDB.Driver.IMongoDatabase>(database);
 

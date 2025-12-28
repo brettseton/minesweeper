@@ -19,12 +19,12 @@ namespace backend.Repository
         {
             var id = $"{userId}_{gameId}";
             _logger.LogInformation($"Adding in-memory mapping for user {userId} to game {gameId}");
-            
-            _mappings[id] = new UserGameMapping 
-            { 
-                Id = id, 
-                UserId = userId, 
-                GameId = gameId 
+
+            _mappings[id] = new UserGameMapping
+            {
+                Id = id,
+                UserId = userId,
+                GameId = gameId
             };
         }
 

@@ -32,12 +32,12 @@ namespace backend.Controllers
         public ActionResult<IEnumerable<MinesweeperGameDto>> Games()
         {
             var userId = User.GetUserId();
-            
+
             var gameIds = _userGameRepository.GetGameIdsByUserId(userId).ToList();
             if (!gameIds.Any()) return Ok(Enumerable.Empty<MinesweeperGameDto>());
 
             var games = _repository.GetGamesByIds(gameIds);
-            
+
             return Ok(games.Select(g => g.ToGameDto()));
         }
 
@@ -49,7 +49,7 @@ namespace backend.Controllers
             if (!gameIds.Any()) return Ok(new { Won = 0, Lost = 0, InProgress = 0 });
 
             var games = _repository.GetGamesByIds(gameIds);
-            
+
             var won = games.Count(g => g.IsGameWon());
             var lost = games.Count(g => g.IsGameLost());
             var inProgress = games.Count(g => !g.IsGameWon() && !g.IsGameLost());

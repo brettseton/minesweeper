@@ -15,7 +15,7 @@ namespace unittests.Authentication
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var claims = new[] { 
+            var claims = new[] {
                 new Claim(ClaimTypes.Name, "Test user"),
                 new Claim(ClaimTypes.NameIdentifier, "test-user-id")
             };

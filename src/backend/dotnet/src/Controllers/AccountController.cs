@@ -21,8 +21,9 @@ namespace backend.Controllers
         [AllowAnonymous, Route("status")]
         public IActionResult Status()
         {
-            return Ok(new { 
-                isAuthenticated = User.Identity.IsAuthenticated, 
+            return Ok(new
+            {
+                isAuthenticated = User.Identity.IsAuthenticated,
                 name = User.Identity.Name
             });
         }

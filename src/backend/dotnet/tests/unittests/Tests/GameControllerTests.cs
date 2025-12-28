@@ -38,7 +38,7 @@ namespace unittests.Tests
         {
             var startTime = DateTime.UtcNow.AddSeconds(-5);
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/10");
-            
+
             newGame.CreatedAt.Should().BeAfter(startTime);
             newGame.CreatedAt.Should().BeBefore(DateTime.UtcNow.AddSeconds(5));
         }
@@ -228,10 +228,10 @@ namespace unittests.Tests
         public async Task Move_ReturnsBadRequest_WhenCoordinatesAreOutOfBounds()
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
-            
+
             var response = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(_client, $"game/{newGame.Id}", new Point(10, 10)); // 10,10 is out of bounds for 10x10 board
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-            
+
             response = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(_client, $"game/{newGame.Id}", new Point(-1, 0));
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
         }
@@ -242,11 +242,11 @@ namespace unittests.Tests
             // Create a game with very few mines to ensure we have zero squares
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/1");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            
+
             var zeroPoint = GetZeroPoint(repositoryGame.Board);
-            
+
             var updatedGame = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", zeroPoint);
-            
+
             // Count how many squares are revealed
             int revealedCount = 0;
             for (int x = 0; x < updatedGame.Board.Length; x++)
@@ -263,7 +263,7 @@ namespace unittests.Tests
                 for (int y = 0; y < board[0].Length; y++)
                     if (board[x][y] == BoardState.ZERO)
                         return new Point(x, y);
-            
+
             return new Point(-1, -1);
         }
 

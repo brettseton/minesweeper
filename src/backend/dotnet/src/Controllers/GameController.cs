@@ -49,7 +49,7 @@ namespace backend.Controllers
         public ActionResult<MinesweeperGameDto> New([FromRoute] int numberOfColumns = 10, [FromRoute] int numberOfRows = 10, [FromRoute] int numberOfMines = 10)
         {
             _logger.LogInformation($"Creating new game");
-            var game = new MinesweeperGame().GetNewGame(numberOfColumns, numberOfRows, numberOfMines);           
+            var game = new MinesweeperGame().GetNewGame(numberOfColumns, numberOfRows, numberOfMines);
             _repository.Save(game);
             return Ok(game.ToGameDto());
         }
@@ -67,7 +67,7 @@ namespace backend.Controllers
 
             if (point.X < 0 || point.X >= game.Board.Length || point.Y < 0 || point.Y >= game.Board[0].Length)
                 return BadRequest("Coordinates out of bounds");
-            
+
             if (game.IsGameOver()) return Ok(game.ToGameDto());
             if (game.Moves != null && game.Moves.Contains(point)) return Ok(game.ToGameDto());
             if (game.Moves != null && game.FlagPoints.Contains(point)) return Ok(game.ToGameDto());
@@ -99,7 +99,7 @@ namespace backend.Controllers
 
             if (game.IsGameOver())
                 return Ok(game.ToGameDto());
-            
+
             // Cannot toggle flag on a space that has already been revealed
             if (game.Moves != null && game.Moves.Contains(point))
                 return Ok(game.ToGameDto());

@@ -19,8 +19,8 @@ namespace backend.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var userId = context.User.Identity?.IsAuthenticated == true 
-                ? context.User.GetUserId() 
+            var userId = context.User.Identity?.IsAuthenticated == true
+                ? context.User.GetUserId()
                 : "Anonymous";
 
             using (_logger.BeginScope(new Dictionary<string, object> { ["UserId"] = userId }))
