@@ -1,13 +1,15 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS publish
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS publish
+ARG TARGETARCH
 WORKDIR /src
 COPY frontend.csproj ./
 
-RUN dotnet restore frontend.csproj --runtime alpine-x64
+# Map Docker TARGETARCH to .NET RID
+RUN dotnet restore frontend.csproj --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi)
 COPY . .
 
 RUN dotnet publish frontend.csproj -c Release -o /app/publish \
     --no-restore \ 
-    --runtime alpine-x64 \
+    --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi) \
     --self-contained true \
     /p:PublishTrimmed=true \
     /p:PublishSingleFile=true

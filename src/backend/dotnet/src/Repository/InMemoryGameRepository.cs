@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using backend.Model;
 using Microsoft.Extensions.Logging;
 
@@ -48,6 +49,11 @@ namespace backend.Repository
         {
             logger.LogInformation($"Save Game: {entry.Id}");
             _entities[entry.Id] = entry;
+        }
+
+        public IEnumerable<MinesweeperGame> GetGamesByIds(IEnumerable<int> ids)
+        {
+            return _entities.Values.Where(game => ids.Contains(game.Id));
         }
     }
 }

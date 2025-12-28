@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers
 {
-    [Authorize, Route("Account")]
+    [Authorize, Route("account")]
     public class AccountController : Controller
     {
 
@@ -18,11 +18,20 @@ namespace backend.Controllers
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
 
-        [Route("google-logout")]
+        [AllowAnonymous, Route("status")]
+        public IActionResult Status()
+        {
+            return Ok(new { 
+                isAuthenticated = User.Identity.IsAuthenticated, 
+                name = User.Identity.Name
+            });
+        }
+
+        [HttpPost, Route("google-logout")]
         public async Task<IActionResult> GoogleLogout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Ok("Logged out");
+            return Ok(new { Message = "Logged out" });
         }
     }
 }

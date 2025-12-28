@@ -25,7 +25,7 @@ namespace backend.Model
         [DataMember(Name = "MineCount")]
         public int MineCount => MinePoints?.Count ?? 0;
 
-        //[BsonElement("MinePoints")]
+        [BsonElement("MinePoints")]
         [Newtonsoft.Json.JsonIgnore]
         [JsonIgnore]
         public HashSet<Point> MinePoints { get; set; }
@@ -33,6 +33,18 @@ namespace backend.Model
         [DataMember(Name = "FlagPoints")]
         [BsonElement("FlagPoints")]
         public HashSet<Point> FlagPoints { get; set; }
+
+        [DataMember(Name = "CreatedAt")]
+        [BsonElement("CreatedAt")]
+        public DateTime CreatedAt { get; set; }
+    }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum GameStatus
+    {
+        InProgress,
+        Won,
+        Lost
     }
 
     [DataContract]
@@ -45,6 +57,10 @@ namespace backend.Model
         public int MineCount { get; set; }
 
         public HashSet<Point> FlagPoints { get; set; }
+
+        public GameStatus Status { get; set; }
+
+        public DateTime CreatedAt { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -68,6 +84,8 @@ namespace backend.Model
         [DataMember(Name = "y")]
         [BsonElement("y")]
         public int Y { get; set; }
+
+        public int? GameId { get; set; }
 
         public override bool Equals(Object obj)
         {

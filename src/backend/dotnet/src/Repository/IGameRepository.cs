@@ -9,5 +9,6 @@ namespace backend.Repository
         MinesweeperGame AddMoves(int id, Point[] points);
         MinesweeperGame AddFlag(int id, Point point);
         MinesweeperGame RemoveFlag(int id, Point point);
+        System.Collections.Generic.IEnumerable<MinesweeperGame> GetGamesByIds(System.Collections.Generic.IEnumerable<int> ids);
     }
 }

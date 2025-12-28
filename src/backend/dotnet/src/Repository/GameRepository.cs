@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using backend.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,14 +14,9 @@ namespace backend.Repository
 
         public GameRepository(
             ILoggerFactory loggingFactory,
-            IOptionsMonitor<MongoConfig> config)
+            IMongoDatabase database)
         {
             logger = loggingFactory.CreateLogger<GameRepository>();
-
-            logger.LogInformation($"Trying to connect to {config.CurrentValue.DatabaseAddress}");
-
-            var client = new MongoClient(config.CurrentValue.DatabaseAddress);
-            var database = client.GetDatabase("MinesweeperGame");
             entities = database.GetCollection<MinesweeperGame>("Games");
         }
 
@@ -53,6 +50,11 @@ namespace backend.Repository
         public void Save(MinesweeperGame entry)
         {
             entities.InsertOne(entry);
+        }
+
+        public IEnumerable<MinesweeperGame> GetGamesByIds(IEnumerable<int> ids)
+        {
+            return entities.Find(game => ids.Contains(game.Id)).ToList();
         }
     }
 }

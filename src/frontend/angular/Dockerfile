@@ -1,4 +1,6 @@
-FROM node:latest AS build
+FROM node:18-alpine AS build
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++ py3-setuptools
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm install

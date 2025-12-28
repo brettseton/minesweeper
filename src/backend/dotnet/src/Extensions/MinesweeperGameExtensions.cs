@@ -95,17 +95,26 @@ namespace backend.Extensions
             game.Moves = new HashSet<Point>();
             game.MinePoints = minePoints;
             game.FlagPoints = new HashSet<Point>();
+            game.CreatedAt = DateTime.UtcNow;
 
             return game;
         }
 
         public static bool IsGameOver(this MinesweeperGame game)
         {
-            // All moves have been made
-            if (game.Moves.Count + game.MineCount == game.Board.Length * game.Board[0].Length) return true;
-            // A Mine was selected
-            if (game.MinePoints.Intersect(game.Moves).Any()) return true;
-            return false;
+            return game.IsGameWon() || game.IsGameLost();
+        }
+
+        public static bool IsGameWon(this MinesweeperGame game)
+        {
+            // Game is won if all non-mine squares have been revealed
+            return game.Moves.Count + game.MineCount == game.Board.Length * game.Board[0].Length;
+        }
+
+        public static bool IsGameLost(this MinesweeperGame game)
+        {
+            // Game is lost if a mine has been selected
+            return game.MinePoints.Intersect(game.Moves).Any();
         }
 
         public static MinesweeperGameDto ToGameDto(this MinesweeperGame game)
@@ -118,7 +127,9 @@ namespace backend.Extensions
                 Id = game.Id,
                 Board = new BoardState[game.Board.Length][],
                 MineCount = game.MineCount,
-                FlagPoints = game.FlagPoints
+                FlagPoints = game.FlagPoints,
+                Status = game.IsGameWon() ? GameStatus.Won : game.IsGameLost() ? GameStatus.Lost : GameStatus.InProgress,
+                CreatedAt = game.CreatedAt
             };
 
             foreach (var x in Enumerable.Range(0, numberOfColumns))

@@ -1,0 +1,30 @@
+<div class="container mt-4">
+  <h1>My Game History</h1>
+  <p *ngIf="loading">Loading your games...</p>
+  <p *ngIf="!loading && games.length === 0">You haven't played any games yet.</p>
+  
+  <div class="row" *ngIf="!loading && games.length > 0">
+    <div class="col-md-4 mb-3" *ngFor="let game of games">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-0">Game #{{game.id}}</h5>
+            <span class="badge" [ngClass]="{
+              'bg-success': game.status === 'Won',
+              'bg-danger': game.status === 'Lost',
+              'bg-warning text-dark': game.status === 'InProgress'
+            }">
+              {{ game.status === 'InProgress' ? 'In Progress' : game.status }}
+            </span>
+          </div>
+          <p class="card-text">Mines: {{game.mineCount}}</p>
+          <button (click)="resumeGame(game.id)" class="btn" 
+             [ngClass]="game.status === 'InProgress' ? 'btn-primary' : 'btn-outline-secondary'">
+            {{ game.status === 'InProgress' ? 'Resume Game' : 'View Results' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -34,12 +34,35 @@ namespace unittests.Tests
         }
 
         [Fact]
+        public async Task CreateNewGame_SetsCreatedAt()
+        {
+            var startTime = DateTime.UtcNow.AddSeconds(-5);
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/10");
+            
+            newGame.CreatedAt.Should().BeAfter(startTime);
+            newGame.CreatedAt.Should().BeBefore(DateTime.UtcNow.AddSeconds(5));
+        }
+
+        [Fact]
+        public async Task CreateNewGame_AssociatesWithUser()
+        {
+            // Create a new game while authenticated (AuthenticationTestHandler handles this)
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/10");
+
+            // Fetch games for the user
+            var userGames = await _client.GetAsync<IEnumerable<MinesweeperGameDto>>("user/games");
+
+            userGames.Should().Contain(g => g.Id == newGame.Id);
+        }
+
+        [Fact]
         public async Task CreateNewGame_MatchesGetCallAsync()
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/100/10");
             var game = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
 
-            newGame.Should().BeEquivalentTo(game);
+            newGame.Should().BeEquivalentTo(game, options => options.Excluding(x => x.CreatedAt));
+            newGame.CreatedAt.Should().BeCloseTo(game.CreatedAt, TimeSpan.FromMilliseconds(100));
 
             Assert.Equal(10, newGame.Board.Length);
             for (var x = 0; x < newGame.Board.Length; x++)
@@ -173,6 +196,75 @@ namespace unittests.Tests
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", minePoint);
 
             victoryGame.Should().BeEquivalentTo(game);
+        }
+
+        [Fact]
+        public async Task ToggleFlagOnRevealedSpace_DoesntChangeBoardStateAsync()
+        {
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            var repositoryGame = _repository.GetGame(newGame.Id);
+            var numberedPoint = GetNumberPoint(repositoryGame.Board);
+
+            // Reveal the space
+            await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
+            var revealedGame = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
+
+            // Try to toggle flag on the revealed space
+            var flaggedGame = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", numberedPoint);
+
+            // The board state should not have changed (it should still be revealed, not flagged)
+            flaggedGame.Should().BeEquivalentTo(revealedGame);
+            Assert.NotEqual(BoardState.FLAG, flaggedGame.Board[numberedPoint.X][numberedPoint.Y]);
+        }
+
+        [Fact]
+        public async Task GetGame_ReturnsNotFound_WhenIdDoesNotExist()
+        {
+            var response = await _client.GetAsync("game/999999");
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task Move_ReturnsBadRequest_WhenCoordinatesAreOutOfBounds()
+        {
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
+            
+            var response = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(_client, $"game/{newGame.Id}", new Point(10, 10)); // 10,10 is out of bounds for 10x10 board
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+            
+            response = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(_client, $"game/{newGame.Id}", new Point(-1, 0));
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task Move_OnZeroSquare_RevealsMultipleSquares()
+        {
+            // Create a game with very few mines to ensure we have zero squares
+            var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/1");
+            var repositoryGame = _repository.GetGame(newGame.Id);
+            
+            var zeroPoint = GetZeroPoint(repositoryGame.Board);
+            
+            var updatedGame = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", zeroPoint);
+            
+            // Count how many squares are revealed
+            int revealedCount = 0;
+            for (int x = 0; x < updatedGame.Board.Length; x++)
+                for (int y = 0; y < updatedGame.Board[0].Length; y++)
+                    if (updatedGame.Board[x][y] != BoardState.UNKNOWN)
+                        revealedCount++;
+
+            revealedCount.Should().BeGreaterThan(1, "Clicking a zero square should reveal the whole empty area");
+        }
+
+        private static Point GetZeroPoint(BoardState[][] board)
+        {
+            for (int x = 0; x < board.Length; x++)
+                for (int y = 0; y < board[0].Length; y++)
+                    if (board[x][y] == BoardState.ZERO)
+                        return new Point(x, y);
+            
+            return new Point(-1, -1);
         }
 
         private static Point GetNumberPoint(BoardState[][] board)

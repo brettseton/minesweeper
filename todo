@@ -1,0 +1,10 @@
+1. add authentication and authorization privacy statement that complies with international standards
+2. separate the login and game logic so that we can run multiple game services at once
+3. enable multiplayer "vs combat mode"
+4. add monitoring so that we can stress test and measure the slowest parts that need improvement bottlenecking the application
+5. add another backend and frontend in rust
+6. add another backend database system to measure performance (postgres and/or entityframeworkcore)
+7. extend unit tests
+8. update from current versions to latest
+9. do we need to add a loadbalancer and is the RBAC working as expected for the microservices?
+10. implement the NewType pattern (Strongly Typed IDs) for UserId and GameId to improve type safety and domain clarity

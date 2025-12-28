@@ -42,3 +42,13 @@ spec:
           value: "8080"
         - name: DB_ADDR
           value: dotnet-mongodb:27017
+        - name: Authentication__Google__ClientId
+          valueFrom:
+            secretKeyRef:
+              name: google-auth-secrets
+              key: GOOGLE_CLIENT_ID
+        - name: Authentication__Google__ClientSecret
+          valueFrom:
+            secretKeyRef:
+              name: google-auth-secrets
+              key: GOOGLE_CLIENT_SECRET

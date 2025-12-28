@@ -36,10 +36,18 @@ namespace unittests.Factories
         {
             builder.ConfigureTestServices(services =>
             {
-                services.RemoveAll(typeof(IOptionsMonitor<MongoConfig>));
                 services.RemoveAll(typeof(IGameRepository));
-                services.Configure<MongoConfig>(c => c.DatabaseAddress = _dbContainer.ConnectionString);
+                services.RemoveAll(typeof(IUserGameRepository));
+                services.RemoveAll(typeof(MongoDB.Driver.IMongoDatabase));
+
+                var client = new MongoDB.Driver.MongoClient(_dbContainer.ConnectionString);
+                var database = client.GetDatabase("MinesweeperGame");
+                
+                services.AddSingleton<MongoDB.Driver.IMongoClient>(client);
+                services.AddSingleton<MongoDB.Driver.IMongoDatabase>(database);
+
                 services.AddSingleton<IGameRepository, GameRepository>();
+                services.AddSingleton<IUserGameRepository, UserGameRepository>();
                 services.AddAuthentication("Test")
                         .AddScheme<AuthenticationSchemeOptions, AuthenticationTestHandler>("Test", null);
             });

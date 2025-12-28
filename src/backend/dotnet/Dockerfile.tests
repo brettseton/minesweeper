@@ -1,0 +1,15 @@
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+WORKDIR /src
+
+# Copy project files and restore dependencies
+COPY ["src/backend.csproj", "src/"]
+COPY ["tests/unittests/unittests.csproj", "tests/unittests/"]
+RUN dotnet restore "tests/unittests/unittests.csproj"
+
+# Copy the rest of the source code
+COPY . .
+
+# Run the tests
+WORKDIR "/src/tests/unittests"
+CMD ["dotnet", "test", "--logger:trx"]
+

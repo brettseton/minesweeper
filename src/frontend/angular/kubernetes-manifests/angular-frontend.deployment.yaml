@@ -34,6 +34,6 @@ spec:
         - name: BACKEND_PORT
           value: "8080"
         - name: BACKEND_API_ADDR
-          value: dotnet-backend
+          value: dotnet-backend.default.svc.cluster.local
         - name: BACKEND_HTTP_SCHEME
           value: "http"
