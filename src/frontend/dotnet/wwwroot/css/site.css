@@ -27,6 +27,18 @@ a:hover{
     
 }
 
+/* Fix for navbar container inheriting large padding/margin */
+.navbar .container {
+    margin-top: 0;
+    padding: 0;
+    background: transparent;
+    z-index: 20;
+}
+
+.dropdown-menu {
+    z-index: 1000;
+}
+
 .grid-container {
     display: grid;
     grid-template-columns: var(--col);

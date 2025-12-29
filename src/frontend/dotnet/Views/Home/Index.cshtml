@@ -1,3 +1,25 @@
-<div class="header">
-Hello World
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    
+    @if (ViewBag.IsAuthenticated == true)
+    {
+        <p>Hello, @ViewBag.UserName!</p>
+        
+        <div class="mt-4">
+            @if (ViewBag.LatestGameId != null)
+            {
+                <a href="~/game/@ViewBag.LatestGameId" class="btn btn-primary btn-lg">Continue Game</a>
+            }
+            <a href="~/game/new" class="btn btn-success btn-lg">New Game</a>
+        </div>
+
+        <form action="~/account/google-logout" method="post" class="mt-4">
+            <button type="submit" class="btn btn-outline-secondary">Logout</button>
+        </form>
+    }
+    else
+    {
+        <p>Log in to play and track your progress.</p>
+        <a href="~/account/google-login?ReturnURL=/" class="btn btn-primary btn-lg">Login with Google</a>
+    }
 </div>

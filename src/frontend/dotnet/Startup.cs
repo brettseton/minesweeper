@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Net.Http;
+using dotnet.Infrastructure;
+using dotnet.Services;
 using frontend;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -12,12 +16,9 @@ namespace dotnet
 {
     public class Startup
     {
-        private EnvironmentConfiguration envConfig;
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-            envConfig = new EnvironmentConfiguration();
         }
 
         public IConfiguration Configuration { get; }
@@ -25,6 +26,27 @@ namespace dotnet
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var envConfig = new EnvironmentConfiguration();
+            
+            // BACKEND_API_ADDR environment variable is provided in frontend.deployment.yaml.
+            var backendAddr = Configuration["BACKEND_API_ADDR"];
+            var port = Configuration["BACKEND_PORT"];
+            bool.TryParse(Configuration["IS_HTTPS"], out bool isHttps);
+
+            if (string.IsNullOrEmpty(backendAddr))
+            {
+                throw new ArgumentException("BACKEND_API_ADDR environment variable is not set");
+            }
+
+            if (string.IsNullOrEmpty(port))
+            {
+                throw new ArgumentException("BACKEND_PORT environment variable is not set");
+            }
+
+            // Set the address of the backend microservice
+            envConfig.BackendAddress = $"http{(isHttps ? "s" : "")}://{backendAddr}:{port}";
+            envConfig.BackendGameAddress = $"{envConfig.BackendAddress}/game";
+
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
@@ -32,38 +54,30 @@ namespace dotnet
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-            services.AddHttpClient();
+            services.AddHttpContextAccessor();
+            services.AddTransient<CookieForwardingHandler>();
+
+            services.AddHttpClient("BackendClient")
+                .AddHttpMessageHandler<CookieForwardingHandler>();
+
+            services.AddHttpClient("Proxy")
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = false
+                });
+
+            services.AddScoped<IGameService, GameService>();
             services.AddSingleton<IEnvironmentConfiguration>(envConfig);
 
             services.AddLogging();
-
             services.AddControllersWithViews();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
-            // API_ADDR environment variable is provided in frontend.deployment.yaml.
-            var backendAddr = Environment.GetEnvironmentVariable("BACKEND_API_ADDR");
-            logger.LogInformation($"Backend address is set to {backendAddr}");
-            if (string.IsNullOrEmpty(backendAddr))
-            {
-                throw new ArgumentException("API_ADDR environment variable is not set");
-            }
-
-            // PORT environment variable is provided in frontend.deployment.yaml.
-            var port = Environment.GetEnvironmentVariable("BACKEND_PORT");
-            logger.LogInformation($"Port is set to {port}");
-            if (string.IsNullOrEmpty(port))
-            {
-                throw new ArgumentException("PORT environment variable is not set");
-            }
-
-            bool.TryParse(Environment.GetEnvironmentVariable("IS_HTTPS"), out bool isHttps);
-            logger.LogInformation($"Is Https is set to {isHttps}");
-
-            // Set the address of the backend microservice
-            envConfig.BackendGameAddress = $"http{(isHttps ? "s" : "")}://{backendAddr}:{port}/game";
+            var envConfig = app.ApplicationServices.GetRequiredService<IEnvironmentConfiguration>();
+            logger.LogInformation($"Backend address is set to {envConfig.BackendAddress}");
 
             if (env.IsDevelopment())
             {
@@ -88,9 +102,7 @@ namespace dotnet
                 endpoints.MapControllerRoute(
                     name: "game",
                     pattern: "{controller=Game}/{action=Game}/{id?}");
-
             });
-
         }
     }
 }

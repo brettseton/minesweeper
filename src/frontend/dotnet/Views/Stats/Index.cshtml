@@ -1,0 +1,50 @@
+@model dotnet.Models.GameStats
+
+@{
+    ViewData["Title"] = "Statistics";
+    var totalFinished = Model?.Won + Model?.Lost ?? 0;
+    var winPercentage = totalFinished > 0 ? (double)Model.Won / totalFinished * 100 : 0;
+    var strokeDashArray = $"{Math.Max(0, Math.Min(100, winPercentage))} {100 - Math.Max(0, Math.Min(100, winPercentage))}";
+}
+
+<div class="container text-center">
+    <h1 class="display-4 mb-5">Statistics</h1>
+
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <svg viewBox="0 0 32 32" class="donut" width="100%" height="200px">
+                <circle class="donut-ring" cx="16" cy="16" r="15.91549430918954" fill="transparent" stroke="#d2d3d4" stroke-width="3"></circle>
+                <circle class="donut-segment" cx="16" cy="16" r="15.91549430918954" fill="transparent" stroke="#28a745" stroke-width="3" stroke-dasharray="@strokeDashArray" stroke-dashoffset="25"></circle>
+                <text x="50%" y="50%" class="chart-text" dominant-baseline="middle" text-anchor="middle" font-size="0.5em">@winPercentage.ToString("0")%</text>
+            </svg>
+            <p class="mt-2 font-weight-bold">Win Rate</p>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Won</div>
+                <div class="card-body">
+                    <h5 class="card-title display-4">@(Model?.Won ?? 0)</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">Lost</div>
+                <div class="card-body">
+                    <h5 class="card-title display-4">@(Model?.Lost ?? 0)</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">In Progress</div>
+                <div class="card-body">
+                    <h5 class="card-title display-4">@(Model?.InProgress ?? 0)</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

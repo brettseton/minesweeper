@@ -1,14 +1,28 @@
 @model MinesweeperGame
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@{
+    var tokenSet = Antiforgery.GetAndStoreTokens(Context);
+}
 
 <script src="~/lib/jquery/dist/jquery.min.js" type="text/javascript" ></script>
 <script>
     $(document).contextmenu(function () { return false; });
     $(document).ready(function () {
+        var token = '@tokenSet.RequestToken';
+        var header = '@tokenSet.HeaderName';
+
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader(header, token);
+            }
+        });
+
         $('.minesweeper-button-uncovered').mousedown(function (event) {
             if (event.which == 3) {
                 console.log("Pressed");
                 $.post("flag/@(Model.Id)/" + this.getAttribute('x') + "/" + this.getAttribute('y'), {}, function (data) {
-                    $("body").html(data);
+                    window.location.reload();
                 });
             }
         })
@@ -17,7 +31,7 @@
             if (event.which == 3) {
                 console.log("Pressed");
                 $.post("flag/@(Model.Id)/" + this.getAttribute('x') + "/" + this.getAttribute('y'), {}, function (data) {
-                    $("body").html(data);
+                    window.location.reload();
                 });
             }
         })

@@ -1,32 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using dotnet.Models;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using frontend;
-using System.Net.Http.Headers;
-using System.Text;
+using dotnet.Services;
 
 namespace dotnet.Controllers
 {
     [Route("Game")]
     [ApiController]
-    public class GameController : Controller
+    public class GameController : BaseController
     {
-        private ILogger _logger;
-        private IEnvironmentConfiguration _envConfig;
-        private IHttpClientFactory _factory;
-
         public GameController(
-            IHttpClientFactory httpFactory,
-            ILoggerFactory loggerFactory,
-            IEnvironmentConfiguration environmentConfiguration)
+            IGameService gameService,
+            ILogger<GameController> logger)
+            : base(gameService, logger)
         {
-            _factory = httpFactory;
-            _logger = loggerFactory.CreateLogger<GameController>();
-            _envConfig = environmentConfiguration;
         }
 
         [HttpGet("{id?}")]
@@ -34,18 +23,11 @@ namespace dotnet.Controllers
         {
             _logger.LogInformation($"Getting game {id}");
 
-            // Get the entries from the backend
             try
             {
                 if ((id ?? 0) == 0) return Redirect($"~/game/new");
 
-                var httpClient = _factory.CreateClient();
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                _logger.LogInformation($"Making a request to {_envConfig.BackendGameAddress}");
-                var response = await httpClient.GetAsync($"{_envConfig.BackendGameAddress}/{id}");
-                _logger.LogInformation("Got response: {0}", response);
-                response.EnsureSuccessStatusCode();
-                var game = await response.Content.ReadAsAsync<MinesweeperGame>();
+                var game = await _gameService.GetGame(id.Value);
                 if (game.Id == id)
                 {
                     return View(game);
@@ -55,7 +37,7 @@ namespace dotnet.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e.ToString());
-                return View();
+                return Redirect("~/");
             }
         }
 
@@ -64,66 +46,51 @@ namespace dotnet.Controllers
         {
             _logger.LogInformation($"Getting new game");
 
-            // Get the entries from the backend
             try
             {
-                var httpClient = _factory.CreateClient();
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                _logger.LogInformation($"Making a request to {_envConfig.BackendGameAddress}/new");
-                var response = await httpClient.GetAsync($"{_envConfig.BackendGameAddress}/new");
-                _logger.LogInformation("Got response: {0}", response);
-                response.EnsureSuccessStatusCode();
-                var game = await response.Content.ReadAsAsync<MinesweeperGame>();
+                var game = await _gameService.NewGame();
                 return Redirect($"~/game/{game.Id}");
             }
             catch (Exception e)
             {
                 _logger.LogError(e.ToString());
-                return View();
+                return Content($"Error starting new game: {e.Message}");
             }
         }
 
         [HttpPost("{id}/{x}/{y}")]
-        //[ValidateAntiForgeryToken]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Post([FromRoute] int id, [FromRoute] int x, [FromRoute] int y)
         {
             _logger.LogInformation($"Guess co-ordinates {x},{y}");
 
             try
             {
-                var httpClient = _factory.CreateClient();
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var httpContent = new StringContent($"{{ \"x\": {x}, \"y\": {y} }}", Encoding.UTF8, "application/json");
-                var response = await httpClient.PostAsync($"{_envConfig.BackendGameAddress}/{id}", httpContent);
-                _logger.LogInformation("Got Post Response: {0}", response);
+                await _gameService.MakeMove(id, x, y);
                 return Redirect($"~/game/{id}");
             }
             catch (Exception e)
             {
                 _logger.LogError(e.ToString());
-                return View();
+                return Redirect("~/");
             }
         }
 
         [HttpPost("flag/{id}/{x}/{y}")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleFlag([FromRoute] int id, [FromRoute] int x, [FromRoute] int y)
         {
             _logger.LogInformation($"Flag co-ordinates {x},{y}");
 
             try
             {
-                var httpClient = _factory.CreateClient();
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var httpContent = new StringContent($"{{ \"x\": {x}, \"y\": {y} }}", Encoding.UTF8, "application/json");
-                var response = await httpClient.PostAsync($"{_envConfig.BackendGameAddress}/flag/{id}", httpContent);
-                _logger.LogInformation("Got ToggleFlag Response: {0}", response);
+                await _gameService.ToggleFlag(id, x, y);
                 return Redirect($"~/game/{id}");
             }
             catch (Exception e)
             {
                 _logger.LogError(e.ToString());
-                return View();
+                return Redirect("~/");
             }
         }
     }

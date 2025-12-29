@@ -1,0 +1,64 @@
+@model List<dotnet.Models.MinesweeperGame>
+
+@{
+    ViewData["Title"] = "Game History";
+}
+
+<style>
+    body > .container {
+        margin-top: 20px !important;
+        padding-top: 20px !important;
+    }
+</style>
+
+<div class="container">
+    <h1 class="display-4 text-center mb-4">Game History</h1>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info text-center" role="alert">
+            No games found. <a href="~/game/new">Start a new game!</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">Game ID</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var game in Model)
+                    {
+                        <tr>
+                            <td>#@game.Id</td>
+                            <td>
+                                @switch (game.Status)
+                                {
+                                    case dotnet.Models.GameStatus.Won:
+                                        <span class="badge badge-success">Won</span>
+                                        break;
+                                    case dotnet.Models.GameStatus.Lost:
+                                        <span class="badge badge-danger">Lost</span>
+                                        break;
+                                    default:
+                                        <span class="badge badge-info">In Progress</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                <a href="~/game/@game.Id" class="btn btn-primary btn-sm">
+                                    @(game.Status == dotnet.Models.GameStatus.InProgress ? "Resume" : "Review")
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

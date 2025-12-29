@@ -1,10 +1,16 @@
-
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace dotnet.Models
 {
+    public enum GameStatus
+    {
+        InProgress,
+        Won,
+        Lost
+    }
+
     [DataContract]
     public class MinesweeperGame
     {
@@ -16,5 +22,9 @@ namespace dotnet.Models
         public int MineCount { get; set; }
         [DataMember(Name = "FlagPoints")]
         public HashSet<Point> FlagPoints { get; set; }
+        [DataMember(Name = "Status")]
+        public GameStatus Status { get; set; }
+        [DataMember(Name = "CreatedAt")]
+        public DateTime CreatedAt { get; set; }
     }
 }

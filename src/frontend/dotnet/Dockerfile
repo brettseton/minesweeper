@@ -8,7 +8,6 @@ RUN dotnet restore frontend.csproj --runtime alpine-$(if [ "$TARGETARCH" = "amd6
 COPY . .
 
 RUN dotnet publish frontend.csproj -c Release -o /app/publish \
-    --no-restore \ 
     --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi) \
     --self-contained true \
     /p:PublishTrimmed=true \
