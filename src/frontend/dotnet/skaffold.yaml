@@ -1,6 +1,6 @@
 # To learn more about the skaffold.yaml schema visit
 # https://skaffold.dev/docs/references/yaml/
-apiVersion: skaffold/v2beta18
+apiVersion: skaffold/v4beta13
 kind: Config
 metadata:
   name: frontend
@@ -9,11 +9,11 @@ build:
   artifacts:
   - image: dotnet-frontend
     context: .
-# defines the Kubernetes manifests to deploy on each run
+manifests:
+  rawYaml:
+  - ./kubernetes-manifests/*.yaml
 deploy:
-  kubectl:
-    manifests:
-    - ./kubernetes-manifests/*.yaml
+  kubectl: {}
 portForward:
   # Cloud Code automatically port forwards resources,
   # or users can define explicit port forwards here.
