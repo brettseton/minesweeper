@@ -8,8 +8,8 @@ namespace unittests.Authentication
 {
     public class AuthenticationTestHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        public AuthenticationTestHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock)
-            : base(options, logger, encoder, clock)
+        public AuthenticationTestHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+            : base(options, logger, encoder)
         {
         }
 

@@ -17,11 +17,11 @@ namespace dotnet.Models
         [DataMember(Name = "Id")]
         public int Id { get; set; }
         [DataMember(Name = "Board")]
-        public int[][] Board { get; set; }
+        public int[][] Board { get; set; } = null!;
         [DataMember(Name = "MineCount")]
         public int MineCount { get; set; }
         [DataMember(Name = "FlagPoints")]
-        public HashSet<Point> FlagPoints { get; set; }
+        public HashSet<Point> FlagPoints { get; set; } = null!;
         [DataMember(Name = "Status")]
         public GameStatus Status { get; set; }
         [DataMember(Name = "CreatedAt")]

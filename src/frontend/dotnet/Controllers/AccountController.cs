@@ -9,7 +9,8 @@ using Microsoft.Extensions.Logging;
 
 namespace dotnet.Controllers
 {
-    public class AccountController : Controller
+    [ApiController]
+    public class AccountController : ControllerBase
     {
         private readonly IHttpClientFactory _factory;
         private readonly IEnvironmentConfiguration _envConfig;
@@ -22,19 +23,19 @@ namespace dotnet.Controllers
             _logger = logger;
         }
 
-        [Route("account/google-login")]
+        [HttpGet, Route("account/google-login")]
         public async Task GoogleLogin()
         {
             await ProxyToBackend("account/google-login");
         }
 
-        [Route("account/status")]
+        [HttpGet, Route("account/status")]
         public async Task Status()
         {
             await ProxyToBackend("account/status");
         }
 
-        [Route("signin-google")]
+        [HttpGet, Route("signin-google")]
         public async Task SignInGoogle()
         {
             await ProxyToBackend("signin-google");
@@ -82,9 +83,9 @@ namespace dotnet.Controllers
             }
         }
 
-        private async Task ProxyToBackend(string path, HttpMethod method = null)
+        private async Task ProxyToBackend(string path, HttpMethod? method = null)
         {
-            try 
+            try
             {
                 method ??= new HttpMethod(Request.Method);
                 var httpClient = _factory.CreateClient("Proxy");

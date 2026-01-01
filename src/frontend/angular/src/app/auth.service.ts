@@ -1,7 +1,5 @@
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
 
 export interface AuthStatus {
   isAuthenticated: boolean;
@@ -9,40 +7,47 @@ export interface AuthStatus {
   loading: boolean;
 }
 
+interface RawAuthStatus {
+  isAuthenticated?: boolean;
+  IsAuthenticated?: boolean;
+  name?: string;
+  Name?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private statusSubject = new BehaviorSubject<AuthStatus>({ isAuthenticated: false, loading: true });
-  public status$ = this.statusSubject.asObservable();
+  private statusSignal = signal<AuthStatus>({ isAuthenticated: false, loading: true });
+  public status = computed(() => this.statusSignal());
 
-  constructor(private http: HttpClient) {
+  private http = inject(HttpClient);
+
+  constructor() {
     console.log('AuthService initialized');
     this.checkStatus();
   }
 
   checkStatus(): void {
     console.log('Checking auth status...');
-    this.http.get<any>('/account/status').subscribe(
-      rawStatus => {
+    this.http.get<RawAuthStatus>('/account/status').subscribe({
+      next: (rawStatus) => {
         console.log('Raw Auth status from backend:', rawStatus);
         
-        // Explicitly check for true/false values
         const isAuth = rawStatus.isAuthenticated === true || rawStatus.IsAuthenticated === true;
         
-        const status: AuthStatus = {
+        this.statusSignal.set({
           isAuthenticated: isAuth,
           name: rawStatus.name || rawStatus.Name,
           loading: false
-        };
-        console.log('Mapped Auth status:', status);
-        this.statusSubject.next(status);
+        });
+        console.log('Mapped Auth status:', this.status());
       },
-      error => {
+      error: (error) => {
         console.error('Auth status check failed:', error);
-        this.statusSubject.next({ isAuthenticated: false, loading: false });
+        this.statusSignal.set({ isAuthenticated: false, loading: false });
       }
-    );
+    });
   }
 
   login(): void {
@@ -53,7 +58,7 @@ export class AuthService {
 
   logout(): void {
     this.http.post('/account/google-logout', {}).subscribe(() => {
-      this.statusSubject.next({ isAuthenticated: false, loading: false });
+      this.statusSignal.set({ isAuthenticated: false, loading: false });
       window.location.reload();
     });
   }

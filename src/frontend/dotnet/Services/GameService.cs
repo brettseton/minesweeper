@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using dotnet.Models;
 using frontend;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace dotnet.Services
 {
@@ -23,8 +23,8 @@ namespace dotnet.Services
             _httpClient = httpClientFactory.CreateClient("BackendClient");
             _envConfig = envConfig;
             _logger = logger;
-            _jsonOptions = new JsonSerializerOptions 
-            { 
+            _jsonOptions = new JsonSerializerOptions
+            {
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter() }
             };
@@ -34,14 +34,14 @@ namespace dotnet.Services
         {
             var response = await _httpClient.GetAsync($"{_envConfig.BackendAddress}/game/{id}");
             response.EnsureSuccessStatusCode();
-            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
+            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions) ?? throw new InvalidOperationException("Failed to deserialize game");
         }
 
         public async Task<MinesweeperGame> NewGame()
         {
             var response = await _httpClient.GetAsync($"{_envConfig.BackendAddress}/game/new");
             response.EnsureSuccessStatusCode();
-            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
+            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions) ?? throw new InvalidOperationException("Failed to deserialize game");
         }
 
         public async Task<MinesweeperGame> MakeMove(int gameId, int x, int y)
@@ -49,7 +49,7 @@ namespace dotnet.Services
             var content = new StringContent(JsonSerializer.Serialize(new { x, y }), Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync($"{_envConfig.BackendAddress}/game/{gameId}", content);
             response.EnsureSuccessStatusCode();
-            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
+            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions) ?? throw new InvalidOperationException("Failed to deserialize game");
         }
 
         public async Task<MinesweeperGame> ToggleFlag(int gameId, int x, int y)
@@ -57,45 +57,48 @@ namespace dotnet.Services
             var content = new StringContent(JsonSerializer.Serialize(new { x, y }), Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync($"{_envConfig.BackendAddress}/game/flag/{gameId}", content);
             response.EnsureSuccessStatusCode();
-            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
+            return await JsonSerializer.DeserializeAsync<MinesweeperGame>(await response.Content.ReadAsStreamAsync(), _jsonOptions) ?? throw new InvalidOperationException("Failed to deserialize game");
         }
 
         public async Task<List<MinesweeperGame>> GetUserGames()
         {
             var response = await _httpClient.GetAsync($"{_envConfig.BackendAddress}/user/games");
             if (!response.IsSuccessStatusCode) return new List<MinesweeperGame>();
-            return await JsonSerializer.DeserializeAsync<List<MinesweeperGame>>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
+            return await JsonSerializer.DeserializeAsync<List<MinesweeperGame>>(await response.Content.ReadAsStreamAsync(), _jsonOptions) ?? new List<MinesweeperGame>();
         }
 
         public async Task<GameStats> GetUserStats()
         {
             var response = await _httpClient.GetAsync($"{_envConfig.BackendAddress}/user/stats");
             if (!response.IsSuccessStatusCode) return new GameStats();
-            return await JsonSerializer.DeserializeAsync<GameStats>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
+            return await JsonSerializer.DeserializeAsync<GameStats>(await response.Content.ReadAsStreamAsync(), _jsonOptions) ?? new GameStats();
         }
 
         public async Task<(bool IsAuthenticated, string Name)> GetUserStatus()
         {
-            try 
+            try
             {
                 var response = await _httpClient.GetAsync($"{_envConfig.BackendAddress}/account/status");
                 if (response.IsSuccessStatusCode)
                 {
                     var status = await JsonSerializer.DeserializeAsync<AuthStatus>(await response.Content.ReadAsStreamAsync(), _jsonOptions);
-                    return (status.IsAuthenticated, status.Name);
+                    if (status != null)
+                    {
+                        return (status.IsAuthenticated, status.Name ?? "Unknown");
+                    }
                 }
             }
             catch (Exception e)
             {
                 _logger.LogWarning($"Failed to fetch auth status: {e.Message}");
             }
-            return (false, null);
+            return (false, "Anonymous");
         }
 
         private class AuthStatus
         {
             public bool IsAuthenticated { get; set; }
-            public string Name { get; set; }
+            public string Name { get; set; } = null!;
         }
     }
 }

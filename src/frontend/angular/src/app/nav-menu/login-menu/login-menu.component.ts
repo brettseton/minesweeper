@@ -1,22 +1,25 @@
-import { Component } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { AuthService } from '../../auth.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-login-menu',
   templateUrl: './login-menu.component.html',
-  styleUrls: ['./login-menu.component.css']
+  styleUrls: ['./login-menu.component.css'],
+  standalone: true,
+  imports: [RouterLink]
 })
 export class LoginMenuComponent {
-  isUserMenuExpanded = false;
+  isUserMenuExpanded = signal(false);
 
-  constructor(public authService: AuthService) {}
+  public authService = inject(AuthService);
 
   toggleUserMenu() {
-    this.isUserMenuExpanded = !this.isUserMenuExpanded;
+    this.isUserMenuExpanded.update(v => !v);
   }
 
   closeUserMenu() {
-    this.isUserMenuExpanded = false;
+    this.isUserMenuExpanded.set(false);
   }
 
   logout() {

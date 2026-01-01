@@ -9,52 +9,60 @@ namespace backend.Repository
 {
     public class GameRepository : IGameRepository
     {
-        private readonly ILogger logger;
-        private readonly IMongoCollection<MinesweeperGame> entities;
+        private readonly ILogger<GameRepository> _logger;
+        private readonly IMongoCollection<MinesweeperGame> _entities;
 
         public GameRepository(
-            ILoggerFactory loggingFactory,
+            ILogger<GameRepository> logger,
             IMongoDatabase database)
         {
-            logger = loggingFactory.CreateLogger<GameRepository>();
-            entities = database.GetCollection<MinesweeperGame>("Games");
+            _logger = logger;
+            _entities = database.GetCollection<MinesweeperGame>("Games");
         }
 
         public MinesweeperGame AddFlag(int id, Point point)
         {
-            logger.LogInformation($"AddFlag: {0}", point);
-            var result = entities.UpdateOne(game => game.Id == id, Builders<MinesweeperGame>.Update.AddToSet(x => x.FlagPoints, point));
-            return GetGame(id);
+            _logger.LogInformation("AddFlag: {Point}", point);
+            return _entities.FindOneAndUpdate<MinesweeperGame>(
+                game => game.Id == id,
+                Builders<MinesweeperGame>.Update.AddToSet(x => x.FlagPoints, point),
+                new FindOneAndUpdateOptions<MinesweeperGame> { ReturnDocument = ReturnDocument.After }
+            )!;
         }
 
         public MinesweeperGame AddMoves(int id, Point[] points)
         {
-
-            logger.LogInformation($"AddMove: {0}", points);
-            var result = entities.UpdateOne(game => game.Id == id, Builders<MinesweeperGame>.Update.AddToSetEach(x => x.Moves, points));
-            return GetGame(id);
+            _logger.LogInformation("AddMove: {Points}", (object)points);
+            return _entities.FindOneAndUpdate<MinesweeperGame>(
+                game => game.Id == id,
+                Builders<MinesweeperGame>.Update.AddToSetEach(x => x.Moves, points),
+                new FindOneAndUpdateOptions<MinesweeperGame> { ReturnDocument = ReturnDocument.After }
+            )!;
         }
 
-        public MinesweeperGame GetGame(int id)
+        public MinesweeperGame? GetGame(int id)
         {
-            return entities.Find(game => game.Id == id).SingleOrDefault();
+            return _entities.Find(game => game.Id == id).SingleOrDefault();
         }
 
         public MinesweeperGame RemoveFlag(int id, Point point)
         {
-            logger.LogInformation($"RemoveFlag: {0}", point);
-            var result = entities.UpdateOne(game => game.Id == id, Builders<MinesweeperGame>.Update.Pull(x => x.FlagPoints, point));
-            return GetGame(id);
+            _logger.LogInformation("RemoveFlag: {Point}", point);
+            return _entities.FindOneAndUpdate<MinesweeperGame>(
+                game => game.Id == id,
+                Builders<MinesweeperGame>.Update.Pull(x => x.FlagPoints, point),
+                new FindOneAndUpdateOptions<MinesweeperGame> { ReturnDocument = ReturnDocument.After }
+            )!;
         }
 
         public void Save(MinesweeperGame entry)
         {
-            entities.InsertOne(entry);
+            _entities.InsertOne(entry);
         }
 
         public IEnumerable<MinesweeperGame> GetGamesByIds(IEnumerable<int> ids)
         {
-            return entities.Find(game => ids.Contains(game.Id)).ToList();
+            return _entities.Find(game => ids.Contains(game.Id)).ToList();
         }
     }
 }

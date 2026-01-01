@@ -1,9 +1,51 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Minesweeper</h2>
+    <small class="text-muted">Game Id: {{ minesweeperGame()?.id ?? 0 }}</small>
+  </div>
+  <button (click)="newGame()" class="btn btn-primary">New Game</button>
+</div>
 
-<p *ngIf="!minesweeperGame"><em>Loading...</em></p>
+@if (!minesweeperGame()) {
+  <div class="text-center p-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+} @else {
+  <div class="row mb-3">
+    <div class="col text-center">
+      <div class="badge bg-danger p-2 fs-6">
+        Mines: {{ minesweeperGame()?.mineCount ?? 0 }}
+      </div>
+    </div>
+    <div class="col text-center">
+      <div class="badge bg-warning text-dark p-2 fs-6">
+        Flags: {{ minesweeperGame()?.flagPoints?.length ?? 0}}
+      </div>
+    </div>
+  </div>
 
-<p><button (click)="newGame()" class="btn btn-primary">New Game</button></p>
-<p>Game Id: {{ minesweeperGame?.id ?? 0 }}</p>
-<p>Mines: {{ minesweeperGame?.mineCount ?? 0 }}</p>
-<p>Flags: {{ minesweeperGame?.flagPoints?.length ?? 0}}</p>
+  <div class="board-wrapper">
+    <div class="board-container" 
+         [style.--cols]="columnCount()" 
+         [style.--rows]="rowCount()">
+      
+      @for (row of rows(); track $index; let y = $index) {
+        @for (cellValue of row; track $index; let x = $index) {
+          <div class="cell" 
+               (click)="onCellClicked(x, y)" 
+               (contextmenu)="onCellRightClicked($event, x, y)">
+            <img [src]="getCellImage(cellValue)" [alt]="cellValue" draggable="false">
+          </div>
+        }
+      }
+    </div>
 
-<canvas id="canvas" width="420px" height="420px" style="background: #fff; margin:20px" #canvas></canvas>
+    @if (isGameOver()) {
+      <div class="overlay">
+        {{ getStatusText() }}
+      </div>
+    }
+  </div>
+}

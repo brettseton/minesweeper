@@ -1,6 +1,4 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-
+import { Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { HistoryComponent } from './history/history.component';
@@ -9,7 +7,7 @@ import { MinesweeperBoardComponent } from './minesweeper-board/minesweeper-board
 import { PrivacyComponent } from './privacy/privacy.component';
 import { AuthGuard } from './auth.guard';
 
-const routes: Routes = [
+export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'history', component: HistoryComponent, canActivate: [AuthGuard] },
@@ -18,7 +16,7 @@ const routes: Routes = [
   { path: 'minesweeper/:id', component: MinesweeperBoardComponent },
   { path: 'privacy', component: PrivacyComponent },
   
-  // External redirects handled via a guard-like function
+  // External redirects
   { 
     path: 'account/google-login', 
     canActivate: [() => { window.location.href = '/account/google-login'; return false; }], 
@@ -35,9 +33,3 @@ const routes: Routes = [
     component: HomeComponent 
   },
 ];
-
-@NgModule({
-  imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule]
-})
-export class AppRoutingModule { }

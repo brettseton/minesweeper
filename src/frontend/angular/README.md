@@ -20,7 +20,13 @@ Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.
 
 ## Running end-to-end tests
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Run `npm run e2e` to execute the end-to-end tests via [Playwright](https://playwright.dev/).
+
+Alternatively, if you are using Skaffold, you can run:
+```bash
+skaffold verify
+```
+This will run the E2E tests against the deployed application.
 
 ## Further help
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using backend.Model;
 
 namespace backend.Extensions
@@ -9,6 +10,8 @@ namespace backend.Extensions
     {
         public static IEnumerable<Point> GetZeroMoves(this MinesweeperGame game, Point point)
         {
+            if (game.Board == null) return Enumerable.Empty<Point>();
+
             var numberOfColumns = game.Board.Length - 1;
             var numberOfRows = game.Board[0].Length - 1;
             var points = new List<Point>((numberOfColumns + 1) * (numberOfRows + 1))
@@ -53,7 +56,6 @@ namespace backend.Extensions
 
         public static MinesweeperGame GetNewGame(this MinesweeperGame game, int numberOfColumns = 10, int numberOfRows = 10, int numberOfMines = 10)
         {
-            var random = new Random();
             var board = new BoardState[numberOfColumns][];
             var minePoints = new HashSet<Point>();
             for (var x = 0; x < numberOfColumns; ++x)
@@ -62,7 +64,7 @@ namespace backend.Extensions
             }
             while (minePoints.Count < numberOfMines)
             {
-                var minePoint = new Point() { X = random.Next(numberOfColumns), Y = random.Next(numberOfRows) };
+                var minePoint = new Point() { X = RandomNumberGenerator.GetInt32(numberOfColumns), Y = RandomNumberGenerator.GetInt32(numberOfRows) };
                 if (!minePoints.Add(minePoint)) continue;
                 // Add 1 to left column surrounding mine
                 if (minePoint.X > 0)
@@ -90,7 +92,7 @@ namespace backend.Extensions
                 board[minePoint.X][minePoint.Y] = BoardState.MINE;
             }
 
-            game.Id = random.Next();
+            game.Id = RandomNumberGenerator.GetInt32(1, int.MaxValue);
             game.Board = board;
             game.Moves = new HashSet<Point>();
             game.MinePoints = minePoints;
@@ -107,18 +109,22 @@ namespace backend.Extensions
 
         public static bool IsGameWon(this MinesweeperGame game)
         {
+            if (game.Board == null || game.Moves == null) return false;
             // Game is won if all non-mine squares have been revealed
             return game.Moves.Count + game.MineCount == game.Board.Length * game.Board[0].Length;
         }
 
         public static bool IsGameLost(this MinesweeperGame game)
         {
+            if (game.MinePoints == null || game.Moves == null) return false;
             // Game is lost if a mine has been selected
             return game.MinePoints.Intersect(game.Moves).Any();
         }
 
         public static MinesweeperGameDto ToGameDto(this MinesweeperGame game)
         {
+            if (game.Board == null) throw new InvalidOperationException("Game board is not initialized.");
+
             var numberOfColumns = game.Board.Length;
             var numberOfRows = game.Board[0].Length;
 
@@ -141,14 +147,20 @@ namespace backend.Extensions
                 }
             }
 
-            foreach (var flag in game.FlagPoints)
+            if (game.FlagPoints != null)
             {
-                gameDto.Board[flag.X][flag.Y] = BoardState.FLAG;
+                foreach (var flag in game.FlagPoints)
+                {
+                    gameDto.Board[flag.X][flag.Y] = BoardState.FLAG;
+                }
             }
 
-            foreach (var move in game.Moves)
+            if (game.Moves != null)
             {
-                gameDto.Board[move.X][move.Y] = (BoardState)game.Board[move.X][move.Y];
+                foreach (var move in game.Moves)
+                {
+                    gameDto.Board[move.X][move.Y] = (BoardState)game.Board[move.X][move.Y];
+                }
             }
 
             return gameDto;

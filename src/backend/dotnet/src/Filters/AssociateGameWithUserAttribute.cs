@@ -16,14 +16,17 @@ namespace backend.Filters
             if (context.Result is OkObjectResult okResult && okResult.Value is MinesweeperGameDto gameDto)
             {
                 var user = context.HttpContext.User;
-                if (user.Identity.IsAuthenticated)
+                if (user.Identity?.IsAuthenticated == true)
                 {
                     var userId = user.GetUserId();
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<AssociateGameWithUserAttribute>>();
-                    var userGameRepository = context.HttpContext.RequestServices.GetRequiredService<IUserGameRepository>();
+                    if (userId != null)
+                    {
+                        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<AssociateGameWithUserAttribute>>();
+                        var userGameRepository = context.HttpContext.RequestServices.GetRequiredService<IUserGameRepository>();
 
-                    logger.LogInformation($"Automatically associating game {gameDto.Id} with user {userId}");
-                    userGameRepository.AddMapping(userId, gameDto.Id);
+                        logger.LogInformation($"Automatically associating game {gameDto.Id} with user {userId}");
+                        userGameRepository.AddMapping(userId, gameDto.Id);
+                    }
                 }
             }
 

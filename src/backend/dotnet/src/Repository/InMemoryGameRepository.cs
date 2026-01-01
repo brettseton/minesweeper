@@ -7,47 +7,46 @@ namespace backend.Repository
 {
     public class InMemoryGameRepository : IGameRepository
     {
-        private readonly ILogger logger;
+        private readonly ILogger<InMemoryGameRepository> _logger;
         private readonly Dictionary<int, MinesweeperGame> _entities;
 
-        public InMemoryGameRepository(ILoggerFactory loggingFactory)
+        public InMemoryGameRepository(ILogger<InMemoryGameRepository> logger)
         {
-            logger = loggingFactory.CreateLogger<InMemoryGameRepository>();
+            _logger = logger;
             _entities = new Dictionary<int, MinesweeperGame>();
         }
 
         public MinesweeperGame AddFlag(int id, Point point)
         {
-            logger.LogInformation($"AddFlag: {0}", point);
-            var result = _entities[id].FlagPoints.Add(point);
-            return GetGame(id);
+            _logger.LogInformation("AddFlag: {Point}", point);
+            _entities[id].FlagPoints!.Add(point);
+            return GetGame(id)!;
         }
 
         public MinesweeperGame AddMoves(int id, Point[] points)
         {
-
-            logger.LogInformation($"AddMove: {0}", points);
-            _entities[id].Moves.UnionWith(points);
-            return GetGame(id);
+            _logger.LogInformation("AddMove: {Points}", (object)points);
+            _entities[id].Moves!.UnionWith(points);
+            return GetGame(id)!;
         }
 
-        public MinesweeperGame GetGame(int id)
+        public MinesweeperGame? GetGame(int id)
         {
-            logger.LogInformation($"Get Game: {id}");
-            logger.LogInformation($"Entities: {string.Join(", ", _entities.Keys)}");
-            return _entities.GetValueOrDefault(id) ?? null;
+            _logger.LogInformation("Get Game: {Id}", id);
+            _logger.LogInformation("Entities: {Keys}", string.Join(", ", _entities.Keys));
+            return _entities.GetValueOrDefault(id);
         }
 
         public MinesweeperGame RemoveFlag(int id, Point point)
         {
-            logger.LogInformation($"RemoveFlag: {0}", point);
-            var result = _entities[id].FlagPoints.Remove(point);
-            return GetGame(id);
+            _logger.LogInformation("RemoveFlag: {Point}", point);
+            _entities[id].FlagPoints!.Remove(point);
+            return GetGame(id)!;
         }
 
         public void Save(MinesweeperGame entry)
         {
-            logger.LogInformation($"Save Game: {entry.Id}");
+            _logger.LogInformation("Save Game: {Id}", entry.Id);
             _entities[entry.Id] = entry;
         }
 

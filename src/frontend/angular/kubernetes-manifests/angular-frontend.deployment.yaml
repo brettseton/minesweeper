@@ -27,7 +27,7 @@ spec:
         image: angular-frontend
         ports:
         - name: http-server
-          containerPort: 80
+          containerPort: 8080
         - name: debug
           containerPort: 9228
         env:

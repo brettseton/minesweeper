@@ -27,7 +27,7 @@ namespace dotnet
         public void ConfigureServices(IServiceCollection services)
         {
             var envConfig = new EnvironmentConfiguration();
-            
+
             // BACKEND_API_ADDR environment variable is provided in frontend.deployment.yaml.
             var backendAddr = Configuration["BACKEND_API_ADDR"];
             var port = Configuration["BACKEND_PORT"];

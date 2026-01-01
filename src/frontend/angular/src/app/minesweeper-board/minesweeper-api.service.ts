@@ -1,16 +1,15 @@
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MinesweeperGame, Point } from './models';
+import { BASE_URL } from '../base-url.token';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MinesweeperApiService {
-  constructor(
-    private http: HttpClient,
-    @Inject('BASE_URL') private baseUrl: string
-  ) {}
+  private http = inject(HttpClient);
+  private baseUrl = inject(BASE_URL);
 
   getGame(id: number): Observable<MinesweeperGame> {
     return this.http.get<MinesweeperGame>(`${this.baseUrl}game/${id}`);

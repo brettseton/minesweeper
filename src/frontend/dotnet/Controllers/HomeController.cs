@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
+using dotnet.Models;
+using dotnet.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using dotnet.Models;
-using System.Linq;
-using dotnet.Services;
 
 namespace dotnet.Controllers
 {
@@ -20,7 +20,7 @@ namespace dotnet.Controllers
         public async Task<IActionResult> Index()
         {
             _logger.LogInformation($"Getting Home Index");
-            
+
             if (ViewBag.IsAuthenticated == true)
             {
                 try
@@ -30,7 +30,7 @@ namespace dotnet.Controllers
                         .Where(g => g.Status == GameStatus.InProgress)
                         .OrderByDescending(g => g.CreatedAt)
                         .FirstOrDefault();
-                    
+
                     ViewBag.LatestGameId = latestActiveGame?.Id;
                 }
                 catch (Exception e)

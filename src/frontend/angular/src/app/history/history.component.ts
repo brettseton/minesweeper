@@ -1,34 +1,40 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { AuthService } from '../auth.service';
 import { GameStateService } from '../game-state.service';
 import { Router } from '@angular/router';
+import { NgClass } from '@angular/common';
+
+interface GameHistoryItem {
+  id: number;
+  status: string;
+  mineCount: number;
+}
 
 @Component({
   selector: 'app-history',
-  templateUrl: './history.component.html'
+  templateUrl: './history.component.html',
+  standalone: true,
+  imports: [NgClass]
 })
 export class HistoryComponent implements OnInit {
-  public games: any[] = [];
+  public games: GameHistoryItem[] = [];
   public loading = true;
 
-  constructor(
-    private http: HttpClient, 
-    private authService: AuthService,
-    private gameStateService: GameStateService,
-    private router: Router) { }
+  private http = inject(HttpClient);
+  private gameStateService = inject(GameStateService);
+  private router = inject(Router);
 
   ngOnInit(): void {
-    this.http.get<any[]>('/user/games').subscribe(
-      result => {
+    this.http.get<GameHistoryItem[]>('/user/games').subscribe({
+      next: (result) => {
         this.games = result;
         this.loading = false;
       },
-      error => {
+      error: (error) => {
         console.error('Could not fetch game history', error);
         this.loading = false;
       }
-    );
+    });
   }
 
   resumeGame(id: number) {

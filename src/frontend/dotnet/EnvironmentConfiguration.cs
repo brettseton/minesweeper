@@ -8,7 +8,7 @@
 
     public class EnvironmentConfiguration : IEnvironmentConfiguration
     {
-        public string BackendAddress { get; set; }
-        public string BackendGameAddress { get; set; }
+        public string BackendAddress { get; set; } = null!;
+        public string BackendGameAddress { get; set; } = null!;
     }
 }

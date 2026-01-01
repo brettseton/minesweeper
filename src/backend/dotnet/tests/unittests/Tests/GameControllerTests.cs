@@ -64,15 +64,18 @@ namespace unittests.Tests
             newGame.Should().BeEquivalentTo(game, options => options.Excluding(x => x.CreatedAt));
             newGame.CreatedAt.Should().BeCloseTo(game.CreatedAt, TimeSpan.FromMilliseconds(100));
 
-            Assert.Equal(10, newGame.Board.Length);
+            Assert.NotNull(newGame.Board);
+            Assert.Equal(10, newGame.Board!.Length);
             for (var x = 0; x < newGame.Board.Length; x++)
             {
+                Assert.NotNull(newGame.Board[x]);
                 Assert.Equal(100, newGame.Board[x].Length);
                 for (var y = 0; y < newGame.Board[x].Length; y++)
                     Assert.Equal(BoardState.UNKNOWN, newGame.Board[x][y]);
             }
             Assert.Equal(10, newGame.MineCount);
-            Assert.Empty(newGame.FlagPoints);
+            Assert.NotNull(newGame.FlagPoints);
+            Assert.Empty(newGame.FlagPoints!);
         }
 
         [Fact]
@@ -82,10 +85,13 @@ namespace unittests.Tests
 
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", new Point(0, 0));
 
-            Assert.Equal(BoardState.FLAG, game.Board[0][0]);
-            Assert.Single(game.FlagPoints);
+            Assert.NotNull(game.Board);
+            Assert.Equal(BoardState.FLAG, game.Board![0][0]);
+            Assert.NotNull(game.FlagPoints);
+            Assert.Single(game.FlagPoints!);
             game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", new Point(0, 0));
-            for (var x = 0; x < game.Board.Length; x++)
+            Assert.NotNull(game.Board);
+            for (var x = 0; x < game.Board!.Length; x++)
                 for (var y = 0; y < game.Board[0].Length; y++)
                     Assert.Equal(BoardState.UNKNOWN, game.Board[x][y]);
         }
@@ -96,7 +102,9 @@ namespace unittests.Tests
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
 
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var numberedPoint = GetNumberPoint(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var numberedPoint = GetNumberPoint(repositoryGame.Board!);
 
             var gameFlagToggled = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", numberedPoint);
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
@@ -109,10 +117,13 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var numberedPoint = GetNumberPoint(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var numberedPoint = GetNumberPoint(repositoryGame.Board!);
 
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
-            Assert.InRange(game.Board[numberedPoint.X][numberedPoint.Y], BoardState.ONE, BoardState.EIGHT);
+            Assert.NotNull(game.Board);
+            Assert.InRange(game.Board![numberedPoint.X][numberedPoint.Y], BoardState.ONE, BoardState.EIGHT);
         }
 
         [Fact]
@@ -120,12 +131,16 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var minePoint = GetMinePoint(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var minePoint = GetMinePoint(repositoryGame.Board!);
 
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
-            Assert.Equal(BoardState.MINE, game.Board[minePoint.X][minePoint.Y]);
-            foreach (var mine in repositoryGame.MinePoints)
+            Assert.NotNull(game.Board);
+            Assert.Equal(BoardState.MINE, game.Board![minePoint.X][minePoint.Y]);
+            Assert.NotNull(repositoryGame.MinePoints);
+            foreach (var mine in repositoryGame.MinePoints!)
             {
                 Assert.Equal(BoardState.MINE, game.Board[mine.X][mine.Y]);
             }
@@ -136,11 +151,13 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var minePoint = GetMinePoint(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var minePoint = GetMinePoint(repositoryGame.Board!);
 
             var gameOver = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
-            var numberedPoint = GetNumberPoint(repositoryGame.Board);
+            var numberedPoint = GetNumberPoint(repositoryGame.Board!);
 
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
 
@@ -153,14 +170,16 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var numberedPoints = GetAllNumberPoints(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var numberedPoints = GetAllNumberPoints(repositoryGame.Board!);
             foreach (var numberedPoint in numberedPoints)
             {
                 await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
             }
             var victoryGame = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
 
-            var minePoint = GetMinePoint(repositoryGame.Board);
+            var minePoint = GetMinePoint(repositoryGame.Board!);
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
             victoryGame.Should().BeEquivalentTo(game);
@@ -171,10 +190,12 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var minePoint = GetMinePoint(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var minePoint = GetMinePoint(repositoryGame.Board!);
             var gameOver = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", minePoint);
 
-            var numberedPoint = GetNumberPoint(repositoryGame.Board);
+            var numberedPoint = GetNumberPoint(repositoryGame.Board!);
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
 
             gameOver.Should().BeEquivalentTo(game);
@@ -185,14 +206,16 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var numberedPoints = GetAllNumberPoints(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var numberedPoints = GetAllNumberPoints(repositoryGame.Board!);
             foreach (var numberedPoint in numberedPoints)
             {
                 await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
             }
             var victoryGame = await _client.GetAsync<MinesweeperGameDto>($"game/{newGame.Id}");
 
-            var minePoint = GetMinePoint(repositoryGame.Board);
+            var minePoint = GetMinePoint(repositoryGame.Board!);
             var game = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/flag/{newGame.Id}", minePoint);
 
             victoryGame.Should().BeEquivalentTo(game);
@@ -203,7 +226,9 @@ namespace unittests.Tests
         {
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/5");
             var repositoryGame = _repository.GetGame(newGame.Id);
-            var numberedPoint = GetNumberPoint(repositoryGame.Board);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
+            var numberedPoint = GetNumberPoint(repositoryGame.Board!);
 
             // Reveal the space
             await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", numberedPoint);
@@ -214,7 +239,8 @@ namespace unittests.Tests
 
             // The board state should not have changed (it should still be revealed, not flagged)
             flaggedGame.Should().BeEquivalentTo(revealedGame);
-            Assert.NotEqual(BoardState.FLAG, flaggedGame.Board[numberedPoint.X][numberedPoint.Y]);
+            Assert.NotNull(flaggedGame.Board);
+            Assert.NotEqual(BoardState.FLAG, flaggedGame.Board![numberedPoint.X][numberedPoint.Y]);
         }
 
         [Fact]
@@ -242,14 +268,17 @@ namespace unittests.Tests
             // Create a game with very few mines to ensure we have zero squares
             var newGame = await _client.GetAsync<MinesweeperGameDto>("game/new/10/10/1");
             var repositoryGame = _repository.GetGame(newGame.Id);
+            Assert.NotNull(repositoryGame);
+            Assert.NotNull(repositoryGame!.Board);
 
-            var zeroPoint = GetZeroPoint(repositoryGame.Board);
+            var zeroPoint = GetZeroPoint(repositoryGame.Board!);
 
             var updatedGame = await _client.PostAsJsonAsync<Point, MinesweeperGameDto>($"game/{newGame.Id}", zeroPoint);
 
             // Count how many squares are revealed
             int revealedCount = 0;
-            for (int x = 0; x < updatedGame.Board.Length; x++)
+            Assert.NotNull(updatedGame.Board);
+            for (int x = 0; x < updatedGame.Board!.Length; x++)
                 for (int y = 0; y < updatedGame.Board[0].Length; y++)
                     if (updatedGame.Board[x][y] != BoardState.UNKNOWN)
                         revealedCount++;

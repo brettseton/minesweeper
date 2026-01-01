@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using dotnet.Models;
-using Microsoft.Extensions.Logging;
 using dotnet.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace dotnet.Controllers
 {
@@ -27,7 +27,7 @@ namespace dotnet.Controllers
             {
                 if ((id ?? 0) == 0) return Redirect($"~/game/new");
 
-                var game = await _gameService.GetGame(id.Value);
+                var game = await _gameService.GetGame(id!.Value);
                 if (game.Id == id)
                 {
                     return View(game);

@@ -1,20 +1,21 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS publish
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS publish
 ARG TARGETARCH
 WORKDIR /src
-COPY frontend.csproj ./
-
-# Map Docker TARGETARCH to .NET RID
-RUN dotnet restore frontend.csproj --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi)
 COPY . .
 
-RUN dotnet publish frontend.csproj -c Release -o /app/publish \
-    --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi) \
+RUN arch=$TARGETARCH \
+    && if [ "$arch" = "amd64" ]; then rid="linux-musl-x64"; \
+    elif [ "$arch" = "arm64" ]; then rid="linux-musl-arm64"; \
+    else rid="linux-musl-$arch"; fi \
+    && echo "Building for RID: $rid" \
+    && dotnet publish frontend.csproj -c Release -o /app/publish \
+    -r $rid \
     --self-contained true \
-    /p:PublishTrimmed=true \
+    /p:PublishTrimmed=false \
     /p:PublishSingleFile=true
 
 # Building final image used in running container
-FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS final
 
 RUN adduser --disabled-password \
   --home /app \

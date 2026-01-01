@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using backend.Repository;
 using backend.Middleware;
+using backend.Repository;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -52,8 +52,8 @@ namespace backend
                     })
                     .AddGoogle(o =>
                     {
-                        o.ClientId = Configuration["Authentication:Google:ClientId"];
-                        o.ClientSecret = Configuration["Authentication:Google:ClientSecret"];
+                        o.ClientId = Configuration["Authentication:Google:ClientId"] ?? string.Empty;
+                        o.ClientSecret = Configuration["Authentication:Google:ClientSecret"] ?? string.Empty;
                         o.CorrelationCookie.SameSite = SameSiteMode.Lax;
                         o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
                     });
@@ -61,7 +61,26 @@ namespace backend
 
             services.AddAuthorization();
 
-            if (string.IsNullOrEmpty(databaseAddr))
+            var postgresConnString = Configuration.GetConnectionString("PostgresConnection");
+            if (string.IsNullOrEmpty(postgresConnString))
+            {
+                var postgresConfig = Configuration.GetSection("Postgres").Get<PostgresConfig>();
+                if (!string.IsNullOrEmpty(postgresConfig?.Host))
+                {
+                    if (string.IsNullOrEmpty(postgresConfig.Password))
+                    {
+                        throw new InvalidOperationException("Postgres:Password is required when Postgres:Host is configured.");
+                    }
+                    postgresConnString = postgresConfig.ToConnectionString();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(postgresConnString))
+            {
+                services.AddScoped<IGameRepository>(s => new PostgresGameRepository(s.GetRequiredService<ILogger<PostgresGameRepository>>(), postgresConnString));
+                services.AddScoped<IUserGameRepository>(s => new PostgresUserGameRepository(s.GetRequiredService<ILogger<PostgresUserGameRepository>>(), postgresConnString));
+            }
+            else if (string.IsNullOrEmpty(databaseAddr))
             {
                 services.AddSingleton<IGameRepository, InMemoryGameRepository>();
                 services.AddSingleton<IUserGameRepository, InMemoryUserGameRepository>();

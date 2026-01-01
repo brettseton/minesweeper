@@ -1,9 +1,6 @@
 ﻿using backend;
 using backend.Controllers;
 using backend.Repository;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
-using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,20 +8,16 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Testcontainers.MongoDb;
 using unittests.Authentication;
 
 namespace unittests.Factories
 {
     public class MongoDBWebApiFactory : WebApplicationFactory<GameController>, IAsyncLifetime
     {
-        private readonly MongoDbTestcontainer _dbContainer =
-            new TestcontainersBuilder<MongoDbTestcontainer>()
-            .WithDatabase(new MongoDbTestcontainerConfiguration()
-            {
-                Database = "Minesweeper",
-                Username = "test",
-                Password = "test123"
-            })
+        private readonly MongoDbContainer _dbContainer =
+            new MongoDbBuilder()
+            .WithImage("mongo:4")
             .Build();
 
         public async Task InitializeAsync()
@@ -40,7 +33,7 @@ namespace unittests.Factories
                 services.RemoveAll(typeof(IUserGameRepository));
                 services.RemoveAll(typeof(MongoDB.Driver.IMongoDatabase));
 
-                var client = new MongoDB.Driver.MongoClient(_dbContainer.ConnectionString);
+                var client = new MongoDB.Driver.MongoClient(_dbContainer.GetConnectionString());
                 var database = client.GetDatabase("MinesweeperGame");
 
                 services.AddSingleton<MongoDB.Driver.IMongoClient>(client);

@@ -9,10 +9,10 @@ namespace backend.Model
     {
         [BsonId]
         [BsonElement("_id")]
-        public string Id { get; set; }
+        public string Id { get; set; } = null!;
 
         [BsonElement("UserId")]
-        public string UserId { get; set; }
+        public string UserId { get; set; } = null!;
 
         [BsonElement("GameId")]
         public int GameId { get; set; }

@@ -1,15 +1,22 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy project files and restore dependencies
+COPY ["backend.sln", "./"]
 COPY ["src/backend.csproj", "src/"]
 COPY ["tests/unittests/unittests.csproj", "tests/unittests/"]
+COPY ["tests/benchmarks/benchmarks/benchmarks.csproj", "tests/benchmarks/benchmarks/"]
+
 RUN dotnet restore "tests/unittests/unittests.csproj"
 
 # Copy the rest of the source code
 COPY . .
 
+# Build the project (leveraging cached restore)
+RUN dotnet build "tests/unittests/unittests.csproj" -c Debug --no-restore
+
 # Run the tests
 WORKDIR "/src/tests/unittests"
-CMD ["dotnet", "test", "--logger:trx"]
+ENV TESTCONTAINERS_RYUK_DISABLED=true
+CMD ["dotnet", "test", "--no-build", "-c", "Debug"]
 

@@ -7,8 +7,7 @@ namespace benchmarks
     {
         public static void Main(string[] args)
         {
-            //BenchmarkRunner.Run<GameControllerBenchmarks>();
-            BenchmarkRunner.Run<MinesweeperGameBenchmarks>();
+            BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
         }
     }
 }

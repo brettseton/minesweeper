@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Statistics";
     var totalFinished = Model?.Won + Model?.Lost ?? 0;
-    var winPercentage = totalFinished > 0 ? (double)Model.Won / totalFinished * 100 : 0;
+    var winPercentage = totalFinished > 0 ? (double)(Model?.Won ?? 0) / totalFinished * 100 : 0;
     var strokeDashArray = $"{Math.Max(0, Math.Min(100, winPercentage))} {100 - Math.Max(0, Math.Min(100, winPercentage))}";
 }
 

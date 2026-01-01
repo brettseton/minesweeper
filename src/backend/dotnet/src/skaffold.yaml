@@ -9,6 +9,10 @@ build:
   artifacts:
   - image: dotnet-backend
     context: .
+test:
+- image: dotnet-backend
+  custom:
+  - command: ../run-tests.sh
 # defines the Kubernetes manifests to deploy on each run
 deploy:
   kustomize:

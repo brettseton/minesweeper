@@ -1,0 +1,14 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files and restore dependencies
+COPY ["src/backend.csproj", "src/"]
+COPY ["tests/benchmarks/benchmarks/benchmarks.csproj", "tests/benchmarks/benchmarks/"]
+RUN dotnet restore "tests/benchmarks/benchmarks/benchmarks.csproj"
+
+# Copy the rest of the source code
+COPY . .
+
+# Run the benchmarks
+WORKDIR "/src/tests/benchmarks/benchmarks"
+CMD ["dotnet", "run", "-c", "Release"]

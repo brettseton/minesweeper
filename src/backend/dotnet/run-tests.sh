@@ -11,7 +11,9 @@ echo "🔨 Building test image..."
 docker build -t minesweeper-tests -f Dockerfile.tests .
 
 # Run the tests with Docker socket mounted (for Testcontainers)
-echo "🚀 Running tests (including Docker Testcontainers)..."
+echo "🚀 Running tests..."
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
+  -e "TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal" \
+  --add-host=host.docker.internal:host-gateway \
   minesweeper-tests

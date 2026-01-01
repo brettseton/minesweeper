@@ -9,6 +9,10 @@ build:
   artifacts:
   - image: angular-frontend
     context: .
+test:
+- image: angular-frontend
+  custom:
+  - command: npm run test -- --watch=false --browsers=ChromeHeadless
 # defines the Kubernetes manifests to deploy on each run
 deploy:
   kubectl:
@@ -34,4 +38,3 @@ profiles:
       context: .
       buildpacks:
         builder: "gcr.io/buildpacks/builder:v1"
-        

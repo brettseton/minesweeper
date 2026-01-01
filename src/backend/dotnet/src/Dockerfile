@@ -1,21 +1,33 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS publish
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS publish
 ARG TARGETARCH
 WORKDIR /src
 COPY backend.csproj ./
 
-# Map Docker TARGETARCH to .NET RID
-RUN dotnet restore backend.csproj --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi)
+# Map Docker TARGETARCH to .NET RID and restore
+RUN arch=$TARGETARCH \
+    && if [ "$arch" = "amd64" ]; then rid="linux-musl-x64"; \
+    elif [ "$arch" = "arm64" ]; then rid="linux-musl-arm64"; \
+    else rid="linux-musl-$arch"; fi \
+    && echo "Restoring for RID: $rid" \
+    && dotnet restore backend.csproj -r $rid
+
 COPY . .
 
-RUN dotnet publish backend.csproj -c Release -o /app/publish \
+# Publish using the calculated RID
+RUN arch=$TARGETARCH \
+    && if [ "$arch" = "amd64" ]; then rid="linux-musl-x64"; \
+    elif [ "$arch" = "arm64" ]; then rid="linux-musl-arm64"; \
+    else rid="linux-musl-$arch"; fi \
+    && echo "Publishing for RID: $rid" \
+    && dotnet publish backend.csproj -c Release -o /app/publish \
+    -r $rid \
     --no-restore \
-    --runtime alpine-$(if [ "$TARGETARCH" = "amd64" ]; then echo "x64"; else echo "$TARGETARCH"; fi) \
     --self-contained true \
-    /p:PublishTrimmed=true \
+    /p:PublishTrimmed=false \
     /p:PublishSingleFile=true
 
 # Building final image used in running container
-FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS final
 
 RUN adduser --disabled-password \
   --home /app \
@@ -24,7 +36,7 @@ RUN adduser --disabled-password \
 USER dotnetuser
 
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
 COPY --from=publish /app/publish .
 ENV ASPNETCORE_URLS=http://*:8080
 

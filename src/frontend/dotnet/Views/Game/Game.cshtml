@@ -47,23 +47,23 @@
     }
     else
     {
-        var cols = Model.Board?.Length ?? 0;
-        var rows = Model.Board?[0]?.Length ?? 0;
-        var gameBoard = Model.Board;
+        var cols = Model?.Board?.Length ?? 0;
+        var rows = Model?.Board?[0]?.Length ?? 0;
+        var gameBoard = Model?.Board;
         var style = $"--col: {string.Concat(Enumerable.Repeat(" 32px", cols))}; --row: 32px;";
         <div>
-            Mines: @(Model.MineCount)
+            Mines: @(Model?.MineCount ?? 0)
             <br/>
-            Flags: @(Model?.FlagPoints.Count() ?? 0)
+            Flags: @(Model?.FlagPoints?.Count() ?? 0)
         </div>
-        @if (Model.Board.Any(y => y.Any(x => x == -2)))
+        @if (Model?.Board != null && Model.Board.Any(y => y != null && y.Any(x => x == -2)))
         {
             <div>
                 Game Over
                 <button onclick="location.href='new'">New Game</button>
             </div>
         }
-        @if (Model.Board.Sum(y => y.Where(x => x >= 0).Count()) == (cols*rows - Model.MineCount))
+        @if (Model?.Board != null && Model.Board.Sum(y => y?.Where(x => x >= 0).Count() ?? 0) == (cols*rows - (Model?.MineCount ?? 0)))
         {
             <div>
                 Victory
@@ -78,26 +78,29 @@
                 {
                     <div class="grid-item">
                         <div class="minesweeper-tile">
-                            <form action="~/game/@(Model.Id)/@(x)/@(y)" method="post">
+                            <form action="~/game/@(Model?.Id ?? 0)/@(x)/@(y)" method="post">
                             @* @Html.AntiForgeryToken() *@
                             @{
-                                switch (gameBoard[x][y])
+                                if (gameBoard != null && gameBoard[x] != null)
                                 {
-                                    case -1:
-                                        <button class="minesweeper-button-uncovered" type="submit" x=@(x) y=@(y) />
-                                        break;
-                                    case -2:
-                                        <button class="minesweeper-button-bomb" x=@(x) y=@(y) disabled />
-                                        break;
-                                    case -3:
-                                        <button class="minesweeper-button-flag" x=@(x) y=@(y) >F</button>
-                                        break;
-                                    case 0:
-                                        <button class="minesweeper-button" x=@(x) y=@(y) disabled />
-                                        break;
-                                    default:
-                                        <button class="minesweeper-button" x=@(x) y=@(y) disabled>@(gameBoard[x][y])</button>
-                                        break;
+                                    switch (gameBoard[x][y])
+                                    {
+                                        case -1:
+                                            <button class="minesweeper-button-uncovered" type="submit" x=@(x) y=@(y) />
+                                            break;
+                                        case -2:
+                                            <button class="minesweeper-button-bomb" x=@(x) y=@(y) disabled />
+                                            break;
+                                        case -3:
+                                            <button class="minesweeper-button-flag" x=@(x) y=@(y) >F</button>
+                                            break;
+                                        case 0:
+                                            <button class="minesweeper-button" x=@(x) y=@(y) disabled />
+                                            break;
+                                        default:
+                                            <button class="minesweeper-button" x=@(x) y=@(y) disabled>@(gameBoard[x][y])</button>
+                                            break;
+                                    }
                                 }
                             }
                             </form>

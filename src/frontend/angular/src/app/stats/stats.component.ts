@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { DecimalPipe } from '@angular/common';
 
 export interface GameStats {
   won: number;
@@ -10,28 +11,30 @@ export interface GameStats {
 @Component({
   selector: 'app-stats',
   templateUrl: './stats.component.html',
-  styleUrls: ['./stats.component.css']
+  styleUrls: ['./stats.component.css'],
+  standalone: true,
+  imports: [DecimalPipe]
 })
 export class StatsComponent implements OnInit {
   public stats: GameStats = { won: 0, lost: 0, inProgress: 0 };
   public loading = true;
   public winPercentage = 0;
 
-  constructor(private http: HttpClient) { }
+  private http = inject(HttpClient);
 
   ngOnInit(): void {
-    this.http.get<GameStats>('/user/stats').subscribe(
-      result => {
+    this.http.get<GameStats>('/user/stats').subscribe({
+      next: (result) => {
         this.stats = result;
         const totalFinished = this.stats.won + this.stats.lost;
         this.winPercentage = totalFinished > 0 ? (this.stats.won / totalFinished) * 100 : 0;
         this.loading = false;
       },
-      error => {
+      error: (error) => {
         console.error('Could not fetch stats', error);
         this.loading = false;
       }
-    );
+    });
   }
 
   getStrokeDashArray(): string {
@@ -40,4 +43,3 @@ export class StatsComponent implements OnInit {
     return `${won} ${100 - won}`;
   }
 }
-

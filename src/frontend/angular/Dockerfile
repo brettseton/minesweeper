@@ -1,13 +1,26 @@
-FROM node:18-alpine AS build
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++ py3-setuptools
+FROM node:24-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
-RUN npm install
+# Install build dependencies only for npm install, then remove them
+RUN apk add --no-cache --virtual .build-deps python3 make g++ py3-setuptools \
+    && npm ci --legacy-peer-deps \
+    && apk del .build-deps
 COPY . .
-RUN npm run build
+RUN npm run build -- --configuration production
 
-FROM nginx:1.23.1-alpine as final
+FROM nginx:1.27.4-alpine as final
+# Remove default nginx config and static files
+RUN rm -rf /usr/share/nginx/html/* \
+    && rm /etc/nginx/conf.d/default.conf
+
 COPY --from=build /src/dist/ /usr/share/nginx/html
 COPY default.conf.template /etc/nginx/templates/default.conf.template
-EXPOSE 80
+
+# Ensure the nginx user owns the necessary directories
+RUN touch /var/run/nginx.pid \
+    && chown -R nginx:nginx /var/run/nginx.pid /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+
+USER nginx
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:8080/ || exit 1

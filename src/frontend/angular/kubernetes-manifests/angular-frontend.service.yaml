@@ -17,4 +17,4 @@ spec:
     tier: frontend
   ports:
   - port: 80
-    targetPort: http-server
+    targetPort: 8080

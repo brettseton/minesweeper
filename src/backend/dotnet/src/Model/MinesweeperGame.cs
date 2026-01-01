@@ -16,11 +16,11 @@ namespace backend.Model
 
         [DataMember(Name = "Board")]
         [BsonElement("Board")]
-        public BoardState[][] Board { get; set; }
+        public BoardState[][]? Board { get; set; }
 
         [DataMember(Name = "Moves")]
         [BsonElement("Moves")]
-        public HashSet<Point> Moves { get; set; }
+        public HashSet<Point>? Moves { get; set; }
 
         [DataMember(Name = "MineCount")]
         public int MineCount => MinePoints?.Count ?? 0;
@@ -28,11 +28,11 @@ namespace backend.Model
         [BsonElement("MinePoints")]
         [Newtonsoft.Json.JsonIgnore]
         [JsonIgnore]
-        public HashSet<Point> MinePoints { get; set; }
+        public HashSet<Point>? MinePoints { get; set; }
 
         [DataMember(Name = "FlagPoints")]
         [BsonElement("FlagPoints")]
-        public HashSet<Point> FlagPoints { get; set; }
+        public HashSet<Point>? FlagPoints { get; set; }
 
         [DataMember(Name = "CreatedAt")]
         [BsonElement("CreatedAt")]
@@ -52,11 +52,11 @@ namespace backend.Model
     {
         public int Id { get; set; }
 
-        public BoardState[][] Board { get; set; }
+        public BoardState[][]? Board { get; set; }
 
         public int MineCount { get; set; }
 
-        public HashSet<Point> FlagPoints { get; set; }
+        public HashSet<Point>? FlagPoints { get; set; }
 
         public GameStatus Status { get; set; }
 
@@ -87,17 +87,14 @@ namespace backend.Model
 
         public int? GameId { get; set; }
 
-        public override bool Equals(Object obj)
+        public override bool Equals(object? obj)
         {
-            if (obj is not Point other)
-                return false;
-            else
-                return X == other.X && Y == other.Y;
+            return obj is Point other && X == other.X && Y == other.Y;
         }
 
         public override int GetHashCode()
         {
-            return (X * 31) ^ (Y * 411);
+            return HashCode.Combine(X, Y);
         }
     }
 }

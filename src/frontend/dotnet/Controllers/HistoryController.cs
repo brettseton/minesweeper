@@ -1,8 +1,8 @@
+using System.Linq;
 using System.Threading.Tasks;
 using dotnet.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
 namespace dotnet.Controllers
 {

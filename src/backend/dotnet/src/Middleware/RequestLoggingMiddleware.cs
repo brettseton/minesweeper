@@ -1,8 +1,8 @@
-using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using backend.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using backend.Extensions;
 
 namespace backend.Middleware
 {
@@ -19,9 +19,9 @@ namespace backend.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var userId = context.User.Identity?.IsAuthenticated == true
+            var userId = (context.User.Identity?.IsAuthenticated == true
                 ? context.User.GetUserId()
-                : "Anonymous";
+                : "Anonymous") ?? "Unknown";
 
             using (_logger.BeginScope(new Dictionary<string, object> { ["UserId"] = userId }))
             {

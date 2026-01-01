@@ -32,6 +32,7 @@ namespace backend.Controllers
         public ActionResult<IEnumerable<MinesweeperGameDto>> Games()
         {
             var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
 
             var gameIds = _userGameRepository.GetGameIdsByUserId(userId).ToList();
             if (!gameIds.Any()) return Ok(Enumerable.Empty<MinesweeperGameDto>());
@@ -45,6 +46,8 @@ namespace backend.Controllers
         public ActionResult Stats()
         {
             var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
             var gameIds = _userGameRepository.GetGameIdsByUserId(userId).ToList();
             if (!gameIds.Any()) return Ok(new { Won = 0, Lost = 0, InProgress = 0 });
 

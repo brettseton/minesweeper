@@ -1,66 +1,70 @@
 <div class="container mt-4">
   <h1 class="mb-4">My Statistics</h1>
 
-  <div *ngIf="loading" class="text-center p-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2">Calculating your stats...</p>
-  </div>
-
-  <div *ngIf="!loading" class="row">
-    <!-- Chart Column -->
-    <div class="col-md-4 text-center">
-      <div class="card shadow-sm p-4 h-100">
-        <h3>Win %</h3>
-        <div class="chart-container my-3">
-          <svg viewBox="0 0 42 42" class="circular-chart">
-            <!-- Background Circle -->
-            <circle class="circle-bg" cx="21" cy="21" r="15.9155" 
-                    fill="transparent" stroke="#e6e6e6" stroke-width="3"></circle>
-            
-            <!-- Progress Circle -->
-            <circle class="circle" cx="21" cy="21" r="15.9155" 
-                    fill="transparent" stroke="#007bff" stroke-width="3"
-                    [attr.stroke-dasharray]="getStrokeDashArray()"
-                    stroke-dashoffset="25"
-                    stroke-linecap="round"></circle>
-            
-            <text x="21" y="21" class="percentage" dominant-baseline="central" text-anchor="middle">
-              {{winPercentage | number:'1.0-1'}}%
-            </text>
-          </svg>
-        </div>
-        <p class="text-muted small">Based on completed games</p>
+  @if (loading) {
+    <div class="text-center p-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <p class="mt-2">Calculating your stats...</p>
     </div>
+  }
 
-    <!-- Stats Column -->
-    <div class="col-md-8">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h4 class="card-title mb-4">Game Breakdown</h4>
-          <div class="list-group list-group-flush">
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <span>Games Won</span>
-              <span class="badge bg-success rounded-pill">{{stats.won}}</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <span>Games Lost</span>
-              <span class="badge bg-danger rounded-pill">{{stats.lost}}</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <span>Games In Progress</span>
-              <span class="badge bg-warning text-dark rounded-pill">{{stats.inProgress}}</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center fw-bold">
-              <span>Total Games</span>
-              <span>{{stats.won + stats.lost + stats.inProgress}}</span>
+  @if (!loading) {
+    <div class="row">
+      <!-- Chart Column -->
+      <div class="col-md-4 text-center">
+        <div class="card shadow-sm p-4 h-100">
+          <h3>Win %</h3>
+          <div class="chart-container my-3">
+            <svg viewBox="0 0 42 42" class="circular-chart">
+              <!-- Background Circle -->
+              <circle class="circle-bg" cx="21" cy="21" r="15.9155" 
+                      fill="transparent" stroke="#e6e6e6" stroke-width="3"></circle>
+              
+              <!-- Progress Circle -->
+              <circle class="circle" cx="21" cy="21" r="15.9155" 
+                      fill="transparent" stroke="#007bff" stroke-width="3"
+                      [attr.stroke-dasharray]="getStrokeDashArray()"
+                      stroke-dashoffset="25"
+                      stroke-linecap="round"></circle>
+              
+              <text x="21" y="21" class="percentage" dominant-baseline="central" text-anchor="middle">
+                {{winPercentage | number:'1.0-1'}}%
+              </text>
+            </svg>
+          </div>
+          <p class="text-muted small">Based on completed games</p>
+        </div>
+      </div>
+
+      <!-- Stats Column -->
+      <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h4 class="card-title mb-4">Game Breakdown</h4>
+            <div class="list-group list-group-flush">
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Games Won</span>
+                <span class="badge bg-success rounded-pill">{{stats.won}}</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Games Lost</span>
+                <span class="badge bg-danger rounded-pill">{{stats.lost}}</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Games In Progress</span>
+                <span class="badge bg-warning text-dark rounded-pill">{{stats.inProgress}}</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center fw-bold">
+                <span>Total Games</span>
+                <span>{{stats.won + stats.lost + stats.inProgress}}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  }
 </div>
 

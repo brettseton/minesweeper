@@ -1,5 +1,7 @@
 {
     "recommendations": [
-        "googlecloudtools.cloudcode"
+        "googlecloudtools.cloudcode",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp"
     ] 
 }

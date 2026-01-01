@@ -7,18 +7,18 @@ namespace backend.Repository
 {
     public class InMemoryUserGameRepository : IUserGameRepository
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<InMemoryUserGameRepository> _logger;
         private readonly Dictionary<string, UserGameMapping> _mappings = new Dictionary<string, UserGameMapping>();
 
-        public InMemoryUserGameRepository(ILoggerFactory loggingFactory)
+        public InMemoryUserGameRepository(ILogger<InMemoryUserGameRepository> logger)
         {
-            _logger = loggingFactory.CreateLogger<InMemoryUserGameRepository>();
+            _logger = logger;
         }
 
         public void AddMapping(string userId, int gameId)
         {
             var id = $"{userId}_{gameId}";
-            _logger.LogInformation($"Adding in-memory mapping for user {userId} to game {gameId}");
+            _logger.LogInformation("Adding in-memory mapping for user {UserId} to game {GameId}", userId, gameId);
 
             _mappings[id] = new UserGameMapping
             {

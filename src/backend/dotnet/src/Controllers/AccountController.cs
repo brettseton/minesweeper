@@ -8,23 +8,24 @@ using Microsoft.AspNetCore.Mvc;
 namespace backend.Controllers
 {
     [Authorize, Route("account")]
-    public class AccountController : Controller
+    [ApiController]
+    public class AccountController : ControllerBase
     {
 
-        [AllowAnonymous, Route("google-login")]
+        [AllowAnonymous, HttpGet, Route("google-login")]
         public IActionResult GoogleLogin()
         {
-            var properties = new AuthenticationProperties { RedirectUri = Request.Query["ReturnURL"] };
+            var properties = new AuthenticationProperties { RedirectUri = Request.Query["ReturnURL"].ToString() };
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
 
-        [AllowAnonymous, Route("status")]
+        [AllowAnonymous, HttpGet, Route("status")]
         public IActionResult Status()
         {
             return Ok(new
             {
-                isAuthenticated = User.Identity.IsAuthenticated,
-                name = User.Identity.Name
+                isAuthenticated = User.Identity?.IsAuthenticated ?? false,
+                name = User.Identity?.Name
             });
         }
 
