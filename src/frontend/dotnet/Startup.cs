@@ -11,6 +11,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 
 namespace dotnet
 {
@@ -68,6 +71,40 @@ namespace dotnet
 
             services.AddScoped<IGameService, GameService>();
             services.AddSingleton<IEnvironmentConfiguration>(envConfig);
+
+            var otlpEndpoint = Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://signoz-otel-collector:4317";
+
+            services.AddOpenTelemetry()
+                .WithTracing(tracing => tracing
+                    .SetResourceBuilder(
+                        ResourceBuilder.CreateDefault()
+                            .AddService(serviceName: "dotnet-frontend")
+                            .AddAttributes(new Dictionary<string, object>
+                            {
+                                ["deployment.environment"] = "development"
+                            }))
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                    }))
+                .WithMetrics(metrics => metrics
+                    .SetResourceBuilder(
+                        ResourceBuilder.CreateDefault()
+                            .AddService(serviceName: "dotnet-frontend")
+                            .AddAttributes(new Dictionary<string, object>
+                            {
+                                ["deployment.environment"] = "development"
+                            }))
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddProcessInstrumentation()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                    }));
 
             services.AddLogging();
             services.AddControllersWithViews();

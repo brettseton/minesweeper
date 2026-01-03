@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  labels:
+    app: clickhouse
+spec:
+  ports:
+    - name: http
+      port: 8123
+    - name: client
+      port: 9000
+  selector:
+    app: clickhouse
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-config
+  labels:
+    app: clickhouse
+data:
+  listen_host.xml: |
+    <clickhouse>
+        <listen_host>0.0.0.0</listen_host>
+    </clickhouse>
+  clusters.xml: |
+    <clickhouse>
+        <remote_servers>
+            <cluster>
+                <shard>
+                    <replica>
+                        <host>127.0.0.1</host>
+                        <port>9000</port>
+                    </replica>
+                </shard>
+            </cluster>
+        </remote_servers>
+    </clickhouse>
+  keeper.xml: |
+    <clickhouse>
+        <keeper_server>
+            <tcp_port>9181</tcp_port>
+            <server_id>1</server_id>
+            <log_storage_path>/var/lib/clickhouse/coordination/log</log_storage_path>
+            <snapshot_storage_path>/var/lib/clickhouse/coordination/snapshots</snapshot_storage_path>
+            <coordination_settings>
+                <operation_timeout_ms>10000</operation_timeout_ms>
+                <session_timeout_ms>30000</session_timeout_ms>
+                <raft_logs_level>warning</raft_logs_level>
+            </coordination_settings>
+            <raft_configuration>
+                <server>
+                    <id>1</id>
+                    <hostname>127.0.0.1</hostname>
+                    <port>9444</port>
+                </server>
+            </raft_configuration>
+        </keeper_server>
+        <zookeeper>
+            <node>
+                <host>127.0.0.1</host>
+                <port>9181</port>
+            </node>
+        </zookeeper>
+        <macros>
+            <shard>01</shard>
+            <replica>01</replica>
+            <cluster>cluster</cluster>
+        </macros>
+    </clickhouse>
+  logger.xml: |
+    <clickhouse>
+        <logger>
+            <log remove="1" />
+            <errorlog remove="1" />
+            <console>1</console>
+            <level>information</level>
+        </logger>
+    </clickhouse>
+  users.xml: |
+    <clickhouse>
+        <profiles>
+            <default>
+                <allow_experimental_json_type>1</allow_experimental_json_type>
+                <allow_experimental_analyzer>1</allow_experimental_analyzer>
+                <max_memory_usage>10000000000</max_memory_usage>
+                <load_balancing>random</load_balancing>
+            </default>
+        </profiles>
+        <users>
+            <default>
+                <password></password>
+                <networks>
+                    <ip>::/0</ip>
+                </networks>
+                <profile>default</profile>
+                <quota>default</quota>
+            </default>
+        </users>
+    </clickhouse>
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clickhouse
+spec:
+  serviceName: clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server:24.8
+          ports:
+            - containerPort: 8123
+            - containerPort: 9000
+          env:
+            - name: CLICKHOUSE_SKIP_USER_SETUP
+              value: "1"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8123
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/listen_host.xml
+              subPath: listen_host.xml
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/clusters.xml
+              subPath: clusters.xml
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/keeper.xml
+              subPath: keeper.xml
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/logger.xml
+              subPath: logger.xml
+            - name: config
+              mountPath: /etc/clickhouse-server/users.xml
+              subPath: users.xml
+      volumes:
+        - name: config
+          configMap:
+            name: clickhouse-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

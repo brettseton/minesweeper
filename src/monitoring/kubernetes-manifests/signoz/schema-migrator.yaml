@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: signoz-schema-migrator
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-clickhouse
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z clickhouse 9000; do echo waiting for clickhouse; sleep 2; done;']
+      containers:
+        - name: schema-migrator
+          image: signoz/signoz-schema-migrator:v0.129.12
+          command:
+            - /signoz-schema-migrator
+            - sync
+            - --dsn=tcp://clickhouse:9000
+            - --cluster-name=cluster
+          env:
+            - name: CLICKHOUSE_HOST
+              value: "clickhouse"
+            - name: CLICKHOUSE_PORT
+              value: "9000"
+            - name: CLICKHOUSE_USER
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              value: ""
+      restartPolicy: OnFailure

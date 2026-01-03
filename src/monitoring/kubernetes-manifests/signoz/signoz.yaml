@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: signoz
+  labels:
+    app: signoz
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: signoz
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signoz
+  labels:
+    app: signoz
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signoz
+  template:
+    metadata:
+      labels:
+        app: signoz
+    spec:
+      initContainers:
+        - name: wait-for-clickhouse
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z clickhouse 9000; do echo waiting for clickhouse; sleep 2; done;']
+      containers:
+        - name: signoz
+          image: signoz/signoz:v0.105.1
+          args: ["--config=/root/config/prometheus.yml"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN
+              value: "tcp://clickhouse:9000"
+            - name: SIGNOZ_SQLSTORE_SQLITE_PATH
+              value: "/var/lib/signoz/signoz.db"
+            - name: STORAGE
+              value: "clickhouse"
+            - name: SIGNOZ_ALERTMANAGER_PROVIDER
+              value: "signoz"
+            - name: DASHBOARDS_PATH
+              value: "/root/config/dashboards"
+            - name: TELEMETRY_ENABLED
+              value: "true"
+            - name: GODEBUG
+              value: "netdns=go"
+            - name: DOT_METRICS_ENABLED
+              value: "true"
+            - name: DEPLOYMENT_TYPE
+              value: "k8s-standalone"
+          volumeMounts:
+            - name: signoz-db
+              mountPath: /var/lib/signoz
+            - name: config
+              mountPath: /root/config/prometheus.yml
+              subPath: prometheus.yml
+            - name: dashboards
+              mountPath: /root/config/dashboards
+      volumes:
+        - name: signoz-db
+          emptyDir: {}
+        - name: dashboards
+          configMap:
+            name: signoz-dashboards
+        - name: config
+          configMap:
+            name: signoz-prometheus-conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signoz-prometheus-conf
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: 'signoz'
+        static_configs:
+          - targets: ['localhost:8080']

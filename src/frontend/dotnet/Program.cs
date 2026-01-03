@@ -7,14 +7,24 @@ namespace dotnet
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
+            var builder = WebApplication.CreateBuilder(args);
+            
+            builder.Logging.ClearProviders();
+            builder.Logging.AddJsonConsole(options =>
+            {
+                options.IncludeScopes = true;
+                options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+                options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
                 {
-                    webBuilder.UseStartup<Startup>();
-                });
+                    Indented = false
+                };
+            });
+
+            var startup = new Startup(builder.Configuration);
+            startup.ConfigureServices(builder.Services);
+            var app = builder.Build();
+            startup.Configure(app, app.Environment, app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Startup>>());
+            app.Run();
+        }
     }
 }

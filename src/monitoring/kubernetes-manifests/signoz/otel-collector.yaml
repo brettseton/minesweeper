@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signoz-otel-collector-conf
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch:
+        send_batch_size: 5000
+        timeout: 1s
+      signozspanmetrics/delta:
+        metrics_exporter: signozclickhousemetrics
+        metrics_flush_interval: 60s
+        latency_histogram_buckets: [100us, 1ms, 2ms, 6ms, 10ms, 50ms, 100ms, 250ms, 500ms, 1000ms, 1400ms, 2000ms, 5s, 10s, 20s, 40s, 60s]
+        dimensions_cache_size: 100000
+    exporters:
+      clickhousetraces:
+        datasource: tcp://default:@clickhouse:9000/signoz_traces
+        use_new_schema: true
+      signozclickhousemetrics:
+        dsn: tcp://default:@clickhouse:9000/signoz_metrics
+      clickhouselogsexporter:
+        dsn: tcp://default:@clickhouse:9000/signoz_logs
+        use_new_schema: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [signozspanmetrics/delta, batch]
+          exporters: [clickhousetraces]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [signozclickhousemetrics]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [clickhouselogsexporter]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signoz-otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signoz-otel-collector
+  template:
+    metadata:
+      labels:
+        app: signoz-otel-collector
+    spec:
+      initContainers:
+        - name: wait-for-clickhouse
+          image: busybox:1.36
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              until nc -z clickhouse 9000; do echo waiting for clickhouse socket; sleep 2; done;
+              until wget -qO- 'http://clickhouse:8123/?query=SELECT+1' > /dev/null; do echo waiting for clickhouse http; sleep 2; done;
+              until wget -qO- 'http://clickhouse:8123/?query=EXISTS+DATABASE+signoz_traces' | grep -q "1"; do echo waiting for signoz_traces db; sleep 2; done;
+      containers:
+        - name: otel-collector
+          image: signoz/signoz-otel-collector:v0.129.12
+          args: ["--config=/etc/otel-collector-config.yaml"]
+          ports:
+            - containerPort: 4317
+            - containerPort: 4318
+          volumeMounts:
+            - name: otel-collector-config-vol
+              mountPath: /etc/otel-collector-config.yaml
+              subPath: otel-collector-config.yaml
+      volumes:
+        - name: otel-collector-config-vol
+          configMap:
+            name: signoz-otel-collector-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signoz-otel-collector
+spec:
+  selector:
+    app: signoz-otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318

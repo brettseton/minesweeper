@@ -13,10 +13,11 @@ import { toObservable } from '@angular/core/rxjs-interop';
 export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private status$ = toObservable(this.authService.status);
 
   ngOnInit(): void {
     // If already logged in, go home
-    toObservable(this.authService.status).pipe(
+    this.status$.pipe(
       filter(status => !status.loading),
       take(1)
     ).subscribe(status => {

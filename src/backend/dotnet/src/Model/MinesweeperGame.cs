@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
-using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace backend.Model
@@ -27,7 +27,7 @@ namespace backend.Model
 
         [BsonElement("MinePoints")]
         [Newtonsoft.Json.JsonIgnore]
-        [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         public HashSet<Point>? MinePoints { get; set; }
 
         [DataMember(Name = "FlagPoints")]
@@ -39,7 +39,7 @@ namespace backend.Model
         public DateTime CreatedAt { get; set; }
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
     public enum GameStatus
     {
         InProgress,

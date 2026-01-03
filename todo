@@ -4,7 +4,8 @@
 4. add monitoring so that we can stress test and measure the slowest parts that need improvement bottlenecking the application
 5. add another backend and frontend in rust
 6. add another backend database system to measure performance (postgres and/or entityframeworkcore)
-7. extend unit tests
+7. extend unit tests and benchmarks
 8. update from current versions to latest
 9. do we need to add a loadbalancer and is the RBAC working as expected for the microservices?
 10. implement the NewType pattern (Strongly Typed IDs) for UserId and GameId to improve type safety and domain clarity
+11. minimize dockerfile image size

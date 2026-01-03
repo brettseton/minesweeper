@@ -2,10 +2,16 @@ import { Component, AfterViewInit, OnDestroy, ChangeDetectionStrategy, ChangeDet
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
+import { metrics } from '@opentelemetry/api';
 
 import { GameStateService } from '../game-state.service';
 import { MinesweeperApiService } from './minesweeper-api.service';
 import { MinesweeperGame, Point, GameState, BoardCell } from './models';
+
+const meter = metrics.getMeter('minesweeper-frontend');
+const clickCounter = meter.createCounter('minesweeper.frontend.clicks', { description: 'Number of cell clicks' });
+const flagCounter = meter.createCounter('minesweeper.frontend.flags', { description: 'Number of flags toggled' });
+const newGameCounter = meter.createCounter('minesweeper.frontend.new_games', { description: 'Number of new games started' });
 
 @Component({
   selector: 'app-minesweeper-board',
@@ -103,6 +109,7 @@ export class MinesweeperBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   public newGame() {
+    newGameCounter.add(1);
     this.gameStateService.setActiveGame(null);
   }
 
@@ -110,6 +117,7 @@ export class MinesweeperBoardComponent implements AfterViewInit, OnDestroy {
     const game = this.minesweeperGame();
     if (!game || this.isGameOver()) return;
 
+    clickCounter.add(1);
     this.apiService.makeMove({ x, y, gameId: game.id }).subscribe({
       next: (res) => { 
         this.minesweeperGame.set(res); 
@@ -124,6 +132,7 @@ export class MinesweeperBoardComponent implements AfterViewInit, OnDestroy {
     const game = this.minesweeperGame();
     if (!game || this.isGameOver()) return;
 
+    flagCounter.add(1);
     this.apiService.toggleFlag({ x, y, gameId: game.id }).subscribe({
       next: (res) => { 
         this.minesweeperGame.set(res); 

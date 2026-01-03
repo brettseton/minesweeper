@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+using Npgsql;
+using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 
 namespace backend
 {
@@ -28,6 +33,44 @@ namespace backend
 
             services.AddCors();
             services.AddControllers();
+
+            var otlpEndpoint = Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://signoz-otel-collector:4317";
+
+            services.AddOpenTelemetry()
+                .WithTracing(tracing => tracing
+                    .SetResourceBuilder(
+                        ResourceBuilder.CreateDefault()
+                            .AddService(serviceName: "dotnet-backend")
+                            .AddAttributes(new Dictionary<string, object>
+                            {
+                                ["deployment.environment"] = "development"
+                            }))
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddNpgsql()
+                    .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                    }))
+                .WithMetrics(metrics => metrics
+                    .SetResourceBuilder(
+                        ResourceBuilder.CreateDefault()
+                            .AddService(serviceName: "dotnet-backend")
+                            .AddAttributes(new Dictionary<string, object>
+                            {
+                                ["deployment.environment"] = "development"
+                            }))
+                    .AddMeter(MinesweeperMetrics.MeterName)
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddProcessInstrumentation()
+                    .AddPrometheusExporter()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                    }));
 
             if (!string.IsNullOrEmpty(Configuration["Authentication:Google:ClientId"]))
             {
@@ -95,6 +138,10 @@ namespace backend
                     var settings = MongoDB.Driver.MongoClientSettings.FromUrl(new MongoDB.Driver.MongoUrl(mongoAddr));
                     settings.ConnectTimeout = TimeSpan.FromSeconds(2);
                     settings.ServerSelectionTimeout = TimeSpan.FromSeconds(2);
+
+                    // Enable tracing for MongoDB
+                    settings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber());
+
                     return new MongoDB.Driver.MongoClient(settings);
                 });
 
@@ -125,6 +172,7 @@ namespace backend
             app.UseForwardedHeaders(forwardedHeaderOptions);
 
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseOpenTelemetryPrometheusScrapingEndpoint();
             app.UseRouting();
 
             app.UseAuthentication();

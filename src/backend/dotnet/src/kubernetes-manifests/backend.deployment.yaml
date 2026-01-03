@@ -42,6 +42,8 @@ spec:
           value: "8080"
         - name: DB_ADDR
           value: dotnet-mongodb:27017
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://signoz-otel-collector:4317"
         - name: Authentication__Google__ClientId
           valueFrom:
             secretKeyRef:

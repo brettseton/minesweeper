@@ -51,6 +51,7 @@ namespace backend.Controllers
             _logger.LogInformation("Creating new game");
             var game = new MinesweeperGame().GetNewGame(numberOfColumns, numberOfRows, numberOfMines);
             _repository.Save(game);
+            MinesweeperMetrics.GamesStarted.Add(1);
             return Ok(game.ToGameDto());
         }
 
@@ -74,15 +75,27 @@ namespace backend.Controllers
             if (game.Moves != null && game.Moves.Contains(point)) return Ok(game.ToGameDto());
             if (game.FlagPoints != null && game.FlagPoints.Contains(point)) return Ok(game.ToGameDto());
 
+            MinesweeperGame updatedGame;
             // 0 square needs to reveal the area it is in
             if (game.Board[point.X][point.Y] == BoardState.ZERO)
-                return Ok(_repository.AddMoves(gameId, game.GetZeroMoves(point).ToArray()).ToGameDto());
-
+            {
+                updatedGame = _repository.AddMoves(gameId, game.GetZeroMoves(point).ToArray());
+            }
             // Reveal all mine locations
-            if (game.Board[point.X][point.Y] == BoardState.MINE)
-                return Ok(_repository.AddMoves(gameId, game.MinePoints?.ToArray() ?? Array.Empty<Point>()).ToGameDto());
+            else if (game.Board[point.X][point.Y] == BoardState.MINE)
+            {
+                updatedGame = _repository.AddMoves(gameId, game.MinePoints?.ToArray() ?? Array.Empty<Point>());
+            }
+            else
+            {
+                updatedGame = _repository.AddMoves(gameId, new Point[] { point });
+            }
 
-            return Ok(_repository.AddMoves(gameId, new Point[] { point }).ToGameDto());
+            MinesweeperMetrics.MovesMade.Add(1);
+            if (updatedGame.IsGameWon()) MinesweeperMetrics.GamesWon.Add(1);
+            if (updatedGame.IsGameLost()) MinesweeperMetrics.GamesLost.Add(1);
+
+            return Ok(updatedGame.ToGameDto());
         }
 
         // Toggle Flag

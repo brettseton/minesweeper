@@ -1,5 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { logs } from '@opentelemetry/api-logs';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 
 export interface AuthStatus {
   isAuthenticated: boolean;
@@ -20,6 +22,7 @@ interface RawAuthStatus {
 export class AuthService {
   private statusSignal = signal<AuthStatus>({ isAuthenticated: false, loading: true });
   public status = computed(() => this.statusSignal());
+  private logger = logs.getLogger('auth-service');
 
   private http = inject(HttpClient);
 
@@ -30,6 +33,12 @@ export class AuthService {
 
   checkStatus(): void {
     console.log('Checking auth status...');
+    this.logger.emit({
+      severityNumber: SeverityNumber.INFO,
+      severityText: 'INFO',
+      body: 'Checking auth status...',
+    });
+
     this.http.get<RawAuthStatus>('/account/status').subscribe({
       next: (rawStatus) => {
         console.log('Raw Auth status from backend:', rawStatus);
@@ -42,9 +51,27 @@ export class AuthService {
           loading: false
         });
         console.log('Mapped Auth status:', this.status());
+
+        this.logger.emit({
+          severityNumber: SeverityNumber.INFO,
+          severityText: 'INFO',
+          body: 'Auth status check successful',
+          attributes: {
+            isAuthenticated: isAuth,
+            userName: rawStatus.name || rawStatus.Name || 'anonymous'
+          }
+        });
       },
       error: (error) => {
         console.error('Auth status check failed:', error);
+        this.logger.emit({
+          severityNumber: SeverityNumber.ERROR,
+          severityText: 'ERROR',
+          body: 'Auth status check failed',
+          attributes: {
+            error: error.message
+          }
+        });
         this.statusSignal.set({ isAuthenticated: false, loading: false });
       }
     });

@@ -37,3 +37,5 @@ spec:
           value: dotnet-backend.default.svc.cluster.local
         - name: BACKEND_HTTP_SCHEME
           value: "http"
+        - name: OTEL_COLLECTOR_ADDR
+          value: signoz-otel-collector.default.svc.cluster.local

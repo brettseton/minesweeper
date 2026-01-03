@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 # Install build dependencies only for npm install, then remove them
 RUN apk add --no-cache --virtual .build-deps python3 make g++ py3-setuptools \
     && npm ci --legacy-peer-deps \
+    && rm -rf node_modules/@opentelemetry/context-zone/node_modules/zone.js \
     && apk del .build-deps
 COPY . .
 RUN npm run build -- --configuration production

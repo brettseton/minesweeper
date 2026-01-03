@@ -1,0 +1,15 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: monitoring
+deploy:
+  kubectl: {}
+manifests:
+  kustomize:
+    paths:
+    - ./kubernetes-manifests
+portForward:
+  - resourceType: service
+    resourceName: signoz
+    port: 8080
+    localPort: 3301

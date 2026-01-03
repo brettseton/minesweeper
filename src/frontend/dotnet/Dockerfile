@@ -1,9 +1,15 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS publish
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS publish
 ARG TARGETARCH
 WORKDIR /src
 COPY . .
 
-RUN arch=$TARGETARCH \
+RUN if [ -z "$TARGETARCH" ]; then \
+        arch=$(uname -m); \
+        if [ "$arch" = "x86_64" ]; then arch="amd64"; \
+        elif [ "$arch" = "aarch64" ] || [ "$arch" = "arm64" ]; then arch="arm64"; fi; \
+    else \
+        arch=$TARGETARCH; \
+    fi \
     && if [ "$arch" = "amd64" ]; then rid="linux-musl-x64"; \
     elif [ "$arch" = "arm64" ]; then rid="linux-musl-arm64"; \
     else rid="linux-musl-$arch"; fi \
