@@ -1,0 +1,20 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: rust-backend
+build:
+  artifacts:
+  - image: rust-backend
+    context: .
+    docker:
+      dockerfile: Dockerfile
+manifests:
+  kustomize:
+    paths:
+    - ./kubernetes-manifests
+deploy:
+  kubectl: {}
+profiles:
+- name: cloudbuild
+  build:
+    googleCloudBuild: {}

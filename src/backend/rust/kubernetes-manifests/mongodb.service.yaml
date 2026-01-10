@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rust-mongodb
+  labels:
+    app: rust
+    tier: db
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: rust
+    tier: db

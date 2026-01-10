@@ -13,3 +13,4 @@ portForward:
     resourceName: signoz
     port: 8080
     localPort: 3301
+    address: localhost

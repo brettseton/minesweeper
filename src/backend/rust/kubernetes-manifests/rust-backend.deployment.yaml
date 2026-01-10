@@ -1,25 +1,20 @@
-﻿# This Deployment manifest defines:
-# - single-replica deployment of the container image, with label "app: dotnet-frontend"
-# - Pod exposes port 8080
-# - specify PORT environment variable to the container process
-# Syntax reference https://kubernetes.io/docs/concepts/configuration/overview/
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dotnet-backend
+  name: rust-backend
   labels:
-    app: dotnet
+    app: rust
     tier: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: dotnet
+      app: rust
       tier: backend
   template:
     metadata:
       labels:
-        app: dotnet
+        app: rust
         tier: backend
     spec:
       initContainers:
@@ -34,11 +29,11 @@ spec:
             cpu: "100m"
         command: ['/bin/sh', '-c']
         args:
-          - echo "Waiting for mongodb at dotnet-mongodb:27017 to go live before the BE..."; 
-          - until (mongo --host dotnet-mongodb:27017 >/dev/null) do echo "Waiting for connection for 2 sec."; sleep 2; done
+          - echo "Waiting for mongodb at rust-mongodb:27017 to go live before the BE..."; 
+          - until (mongo --host rust-mongodb:27017 >/dev/null) do echo "Waiting for connection for 2 sec."; sleep 2; done
       containers:
       - name: backend
-        image: dotnet-backend
+        image: rust-backend
         resources:
           requests:
             memory: "128Mi"
@@ -49,22 +44,22 @@ spec:
         ports:
         - name: http-server
           containerPort: 8080
-        - name: debug
-          containerPort: 9229
         env:
-        - name: PORT
-          value: "8080"
+        - name: RUST_LOG
+          value: "info"
         - name: DB_ADDR
-          value: dotnet-mongodb:27017
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: "http://signoz-otel-collector:4317"
-        - name: Authentication__Google__ClientId
+          value: "rust-mongodb:27017"
+        - name: GOOGLE_CLIENT_ID
           valueFrom:
             secretKeyRef:
               name: google-auth-secrets
               key: GOOGLE_CLIENT_ID
-        - name: Authentication__Google__ClientSecret
+        - name: GOOGLE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: google-auth-secrets
               key: GOOGLE_CLIENT_SECRET
+        - name: GOOGLE_REDIRECT_URI
+          value: "http://localhost:4533/account/callback"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://signoz-otel-collector:4317"
