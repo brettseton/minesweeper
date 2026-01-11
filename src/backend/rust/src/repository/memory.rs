@@ -117,13 +117,30 @@ impl UserGameRepository for InMemoryGameRepository {
             .user_games
             .read()
             .map_err(|e| AppError::Internal(e.to_string()))?;
-        
+
         for (user_id, games) in user_games.iter() {
             if games.contains(&game_id) {
                 return Ok(Some(user_id.clone()));
             }
         }
         Ok(None)
+    }
+
+    async fn get_games_by_user_id(&self, user_id: &str) -> AppResult<Vec<MinesweeperGame>> {
+        let user_games = self
+            .user_games
+            .read()
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let game_ids = user_games.get(user_id).cloned().unwrap_or_default();
+
+        let games = self
+            .games
+            .read()
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(game_ids
+            .iter()
+            .filter_map(|id| games.get(id).cloned())
+            .collect())
     }
 }
 

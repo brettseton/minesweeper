@@ -330,9 +330,7 @@ macro_rules! define_api_tests {
         async fn get_game_returns_not_found_when_id_does_not_exist() {
             let (app, _repo, _node) = $setup_fn().await;
 
-            let req = test::TestRequest::get()
-                .uri(&uri_game(999999))
-                .to_request();
+            let req = test::TestRequest::get().uri(&uri_game(999999)).to_request();
             let resp = test::call_service(&app, req).await;
 
             assert_eq!(resp.status(), actix_web::http::StatusCode::NOT_FOUND);
@@ -509,6 +507,30 @@ macro_rules! define_api_tests {
 
             assert_eq!(resp.status(), actix_web::http::StatusCode::UNAUTHORIZED);
         }
+
+        #[actix_web::test]
+        async fn create_game_fails_when_dimensions_too_large() {
+            let (app, _repo, _node) = $setup_fn().await;
+
+            let req = test::TestRequest::get()
+                .uri(&uri_new_game(51, 50, 10))
+                .to_request();
+            let resp = test::call_service(&app, req).await;
+
+            assert_eq!(resp.status(), actix_web::http::StatusCode::BAD_REQUEST);
+        }
+
+        #[actix_web::test]
+        async fn create_game_fails_when_too_many_mines() {
+            let (app, _repo, _node) = $setup_fn().await;
+
+            let req = test::TestRequest::get()
+                .uri(&uri_new_game(10, 10, 100))
+                .to_request();
+            let resp = test::call_service(&app, req).await;
+
+            assert_eq!(resp.status(), actix_web::http::StatusCode::BAD_REQUEST);
+        }
     };
 }
 
@@ -569,4 +591,69 @@ mod mongo_tests {
     }
 
     define_api_tests!(setup);
+}
+
+#[cfg(test)]
+mod settings_tests {
+    use rust_backend::settings::{
+        AuthSettings, DatabaseSettings, ServerSettings, Settings, TelemetrySettings,
+    };
+
+    #[test]
+    fn settings_validation_fails_in_production_with_short_key() {
+        let settings = Settings {
+            environment: "production".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: true,
+                allowed_origins: vec![],
+                session_secret_key: "short".to_string(),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            auth: AuthSettings {
+                google_client_id: "id".to_string(),
+                google_client_secret: "secret".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn settings_validation_fails_even_in_development_with_short_key() {
+        let settings = Settings {
+            environment: "development".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: false,
+                allowed_origins: vec![],
+                session_secret_key: "short".to_string(),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            auth: AuthSettings {
+                google_client_id: "id".to_string(),
+                google_client_secret: "secret".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_err());
+    }
 }

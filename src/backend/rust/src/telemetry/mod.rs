@@ -6,80 +6,95 @@ use opentelemetry_sdk::{runtime, trace as sdktrace, Resource};
 use tracing_subscriber::prelude::*;
 
 use crate::settings::Settings;
+
 pub fn init_telemetry(settings: &Settings) {
     let otlp_endpoint = &settings.telemetry.otlp_endpoint;
 
     let resource = Resource::new(vec![
         KeyValue::new("service.name", "rust-backend"),
-        KeyValue::new("deployment.environment", "development"),
+        KeyValue::new("deployment.environment", settings.environment.clone()),
     ]);
 
-    // Configure Tracer
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(otlp_endpoint.clone()),
-        )
-        .with_trace_config(sdktrace::config().with_resource(resource.clone()))
-        .install_batch(runtime::Tokio)
-        .expect("Failed to install tracer");
+    let mut telemetry_layer = None;
+    let mut otel_log_layer = None;
 
-    global::set_tracer_provider(tracer.provider().unwrap());
+    if !otlp_endpoint.is_empty() {
+        // Configure Tracer
+        match opentelemetry_otlp::new_pipeline()
+            .tracing()
+            .with_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .tonic()
+                    .with_endpoint(otlp_endpoint.clone()),
+            )
+            .with_trace_config(sdktrace::config().with_resource(resource.clone()))
+            .install_batch(runtime::Tokio)
+        {
+            Ok(tracer) => {
+                global::set_tracer_provider(tracer.provider().unwrap());
+                telemetry_layer = Some(tracing_opentelemetry::layer().with_tracer(tracer));
+            }
+            Err(e) => eprintln!("Failed to install tracer: {}", e),
+        }
 
-    // Configure Metrics
-    let meter_provider = opentelemetry_otlp::new_pipeline()
-        .metrics(runtime::Tokio)
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(otlp_endpoint.clone()),
-        )
-        .with_resource(resource.clone())
-        .build()
-        .expect("Failed to build metrics pipeline");
+        // Configure Metrics
+        match opentelemetry_otlp::new_pipeline()
+            .metrics(runtime::Tokio)
+            .with_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .tonic()
+                    .with_endpoint(otlp_endpoint.clone()),
+            )
+            .with_resource(resource.clone())
+            .build()
+        {
+            Ok(meter_provider) => global::set_meter_provider(meter_provider),
+            Err(e) => eprintln!("Failed to build metrics pipeline: {}", e),
+        }
 
-    global::set_meter_provider(meter_provider);
-
-    // Configure Logs
-    let logger = opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource))
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(otlp_endpoint.clone()),
-        )
-        .install_batch(runtime::Tokio)
-        .expect("Failed to install logger");
-
-    let logger_provider = logger
-        .provider()
-        .expect("Failed to get logger provider")
-        .clone();
-
-    // Set the global logger provider as well
-    global::set_logger_provider(logger_provider.clone());
-
-    let otel_log_layer =
-        opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(&logger_provider);
+        // Configure Logs
+        match opentelemetry_otlp::new_pipeline()
+            .logging()
+            .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource))
+            .with_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .tonic()
+                    .with_endpoint(otlp_endpoint.clone()),
+            )
+            .install_batch(runtime::Tokio)
+        {
+            Ok(logger) => {
+                if let Some(logger_provider) = logger.provider() {
+                    let logger_provider = logger_provider.clone();
+                    global::set_logger_provider(logger_provider.clone());
+                    otel_log_layer = Some(
+                        opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(
+                            &logger_provider,
+                        ),
+                    );
+                }
+            }
+            Err(e) => eprintln!("Failed to install logger: {}", e),
+        }
+    }
 
     // Initialize Tracing Subscriber
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     let filter = tracing_subscriber::EnvFilter::from_default_env()
         .add_directive("info".parse().unwrap())
-        .add_directive("rust_backend=info".parse().unwrap()); // Ensure our own logs are included
+        .add_directive("rust_backend=info".parse().unwrap());
 
     // Initialize the LogTracer to capture logs from the `log` crate and redirect them to tracing
     let _ = tracing_log::LogTracer::init();
 
-    let _ = tracing_subscriber::registry()
+    let registry = tracing_subscriber::registry()
         .with(filter)
-        .with(telemetry)
+        .with(telemetry_layer)
         .with(otel_log_layer)
-        .with(tracing_subscriber::fmt::layer())
-        .try_init();
+        .with(tracing_subscriber::fmt::layer());
+
+    if let Err(e) = registry.try_init() {
+        eprintln!("Failed to initialize tracing registry: {}", e);
+    }
 
     // Initialize custom metrics from the internal module
     self::metrics::MinesweeperMetrics::init();

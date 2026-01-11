@@ -71,11 +71,14 @@ pub async fn create_test_app(
     let settings = Settings::new().unwrap_or_else(|_| {
         // Fallback for tests if env vars aren't set
         Settings {
+            environment: "development".to_string(),
             server: rust_backend::settings::ServerSettings {
                 port: 8080,
                 secure_cookies: false,
                 allowed_origins: vec![],
                 session_secret_key: "a".repeat(64),
+                rate_limit_period_ms: 0,
+                rate_limit_burst_size: 0,
             },
             database: rust_backend::settings::DatabaseSettings {
                 addr: None,

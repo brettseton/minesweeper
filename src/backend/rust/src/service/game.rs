@@ -29,7 +29,7 @@ impl MinesweeperService {
 
     async fn check_ownership(&self, game_id: i32, user: Option<UserInfo>) -> AppResult<()> {
         let owner_id = self.repo.get_game_owner(game_id).await?;
-        
+
         tracing::debug!(
             "Checking ownership: game_id={}, owner_id={:?}, user={:?}",
             game_id,
@@ -64,6 +64,18 @@ impl GameService for MinesweeperService {
         mines: usize,
         user: Option<UserInfo>,
     ) -> AppResult<MinesweeperGame> {
+        if cols * rows > 2500 {
+            return Err(AppError::BadRequest(
+                "Board dimensions too large (max 2500 cells)".to_string(),
+            ));
+        }
+
+        if mines >= cols * rows {
+            return Err(AppError::BadRequest(
+                "Too many mines for the given board size".to_string(),
+            ));
+        }
+
         let game = MinesweeperGame::new(cols, rows, mines);
         self.repo.save(game.clone()).await?;
 
@@ -82,8 +94,8 @@ impl GameService for MinesweeperService {
         point: Point,
         user: Option<UserInfo>,
     ) -> AppResult<MinesweeperGame> {
-        self.check_ownership(id, user).await?;
         let mut game = self.fetch_game(id).await?;
+        self.check_ownership(id, user).await?;
 
         if !game.is_valid_point(&point) {
             return Err(AppError::BadRequest(
@@ -118,8 +130,8 @@ impl GameService for MinesweeperService {
         point: Point,
         user: Option<UserInfo>,
     ) -> AppResult<MinesweeperGame> {
-        self.check_ownership(id, user).await?;
         let game = self.fetch_game(id).await?;
+        self.check_ownership(id, user).await?;
 
         if !game.is_valid_point(&point) {
             return Err(AppError::BadRequest(
@@ -141,13 +153,11 @@ impl GameService for MinesweeperService {
     }
 
     async fn get_user_games(&self, user: UserInfo) -> AppResult<Vec<MinesweeperGame>> {
-        let game_ids = self.repo.get_game_ids_by_user_id(&user.sub).await?;
-        self.repo.get_games_by_ids(&game_ids).await
+        self.repo.get_games_by_user_id(&user.sub).await
     }
 
     async fn get_user_stats(&self, user: UserInfo) -> AppResult<UserStatsDto> {
-        let game_ids = self.repo.get_game_ids_by_user_id(&user.sub).await?;
-        let games = self.repo.get_games_by_ids(&game_ids).await?;
+        let games = self.repo.get_games_by_user_id(&user.sub).await?;
 
         let mut won = 0;
         let mut lost = 0;

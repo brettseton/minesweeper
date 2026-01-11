@@ -45,8 +45,16 @@ spec:
         - name: http-server
           containerPort: 8080
         env:
+        - name: APP_ENVIRONMENT
+          value: "development"
+        - name: SESSION_SECRET_KEY
+          value: "development_dummy_secret_key_that_is_at_least_64_characters_long_12345"
         - name: RUST_LOG
           value: "info"
+        - name: RATE_LIMIT_PERIOD_MS
+          value: "1"
+        - name: RATE_LIMIT_BURST_SIZE
+          value: "10000"
         - name: DB_ADDR
           value: "rust-mongodb:27017"
         - name: GOOGLE_CLIENT_ID

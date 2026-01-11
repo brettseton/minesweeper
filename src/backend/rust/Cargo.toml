@@ -49,6 +49,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "std"] }
 
 actix-web-opentelemetry = "0.16"
 
+actix-governor = "0.6"
+
 tonic = "0.10"
 
 openidconnect = "3.4"
@@ -65,3 +67,12 @@ config = "0.13"
 testcontainers = "0.15"
 once_cell = "1.18"
 actix-http = "3"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[bench]]
+name = "api_benchmarks"
+harness = false
+
+[[bench]]
+name = "engine_benchmarks"
+harness = false

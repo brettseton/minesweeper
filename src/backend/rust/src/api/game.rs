@@ -72,14 +72,8 @@ pub async fn toggle_flag(
     Ok(HttpResponse::Ok().json(MinesweeperGameDto::from(&game)))
 }
 
-fn extract_request_params(
-    path: Option<web::Path<i32>>,
-    req: MakeMoveRequest,
-) -> (i32, Point) {
-    let game_id = path
-        .map(|p| p.into_inner())
-        .or(req.game_id)
-        .unwrap_or(0);
+fn extract_request_params(path: Option<web::Path<i32>>, req: MakeMoveRequest) -> (i32, Point) {
+    let game_id = path.map(|p| p.into_inner()).or(req.game_id).unwrap_or(0);
     (game_id, Point { x: req.x, y: req.y })
 }
 

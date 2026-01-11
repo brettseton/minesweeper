@@ -125,4 +125,23 @@ impl UserGameRepository for MongoGameRepository {
             .await?;
         Ok(mapping.map(|m| m.user_id))
     }
+
+    async fn get_games_by_user_id(&self, user_id: &str) -> AppResult<Vec<MinesweeperGame>> {
+        use futures_util::TryStreamExt;
+        let mapping = self
+            .user_games_collection
+            .find_one(doc! { "_id": user_id }, None)
+            .await?;
+        let game_ids = mapping.map(|m| m.game_ids).unwrap_or_default();
+        if game_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let ids_bson = mongodb::bson::to_bson(&game_ids)?;
+        let cursor = self
+            .collection
+            .find(doc! { "_id": { "$in": ids_bson } }, None)
+            .await?;
+        Ok(cursor.try_collect().await?)
+    }
 }

@@ -31,8 +31,17 @@ impl ResponseError for AppError {
     }
 
     fn error_response(&self) -> HttpResponse {
-        if let AppError::Internal(ref e) = self {
-            error!("Internal server error: {}", e);
+        match self {
+            AppError::Internal(ref e) => {
+                error!("Internal server error: {}", e);
+            }
+            AppError::Unauthorized => {
+                tracing::warn!("Security Event: Unauthorized access attempt");
+            }
+            AppError::BadRequest(ref e) => {
+                tracing::warn!("Security Event: Bad request: {}", e);
+            }
+            _ => {}
         }
 
         HttpResponse::build(self.status_code()).json(ErrorResponse {

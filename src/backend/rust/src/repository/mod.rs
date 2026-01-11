@@ -24,6 +24,7 @@ pub trait UserGameRepository: Send + Sync {
     async fn add_mapping(&self, user_id: &str, game_id: i32) -> AppResult<()>;
     async fn get_game_ids_by_user_id(&self, user_id: &str) -> AppResult<Vec<i32>>;
     async fn get_game_owner(&self, game_id: i32) -> AppResult<Option<String>>;
+    async fn get_games_by_user_id(&self, user_id: &str) -> AppResult<Vec<MinesweeperGame>>;
 }
 
 pub trait MinesweeperRepository: GameRepository + UserGameRepository {}

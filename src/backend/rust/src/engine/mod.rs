@@ -87,11 +87,11 @@ impl BoardEngine for MinesweeperEngine {
 impl MinesweeperEngine {
     fn get_zero_moves(&self, game: &MinesweeperGame, start: Point) -> Vec<Point> {
         let mut points = Vec::new();
-        let mut visited = HashSet::new();
+        let mut visited = vec![false; game.cols * game.rows];
         let mut queue = VecDeque::new();
 
         queue.push_back(start);
-        visited.insert(start);
+        visited[start.x * game.rows + start.y] = true;
 
         while let Some(p) = queue.pop_front() {
             points.push(p);
@@ -108,13 +108,13 @@ impl MinesweeperEngine {
 
                         if nx >= 0 && nx < game.cols as isize && ny >= 0 && ny < game.rows as isize
                         {
-                            let neighbor = Point {
-                                x: nx as usize,
-                                y: ny as usize,
-                            };
+                            let nx = nx as usize;
+                            let ny = ny as usize;
+                            let idx = nx * game.rows + ny;
 
-                            if visited.insert(neighbor) {
-                                queue.push_back(neighbor);
+                            if !visited[idx] {
+                                visited[idx] = true;
+                                queue.push_back(Point { x: nx, y: ny });
                             }
                         }
                     }

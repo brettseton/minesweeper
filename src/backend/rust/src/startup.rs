@@ -3,6 +3,7 @@ use crate::auth::GoogleOAuthClient;
 use crate::service::GameService;
 use crate::settings::Settings;
 use actix_cors::Cors;
+use actix_governor::{Governor, GovernorConfigBuilder};
 pub use actix_identity::IdentityMiddleware;
 pub use actix_session::{
     config::PersistentSession, storage::CookieSessionStore, SessionMiddleware,
@@ -24,15 +25,30 @@ pub fn configure_app(
 ) {
     cfg.app_data(repo_data)
         .app_data(service_data)
-        .app_data(settings_data)
+        .app_data(settings_data.clone())
         .configure(|c| {
             if let Some(ref client) = google_client {
                 c.app_data(client.clone());
             }
-        })
+        });
+
+    let scope = web::scope("")
         .configure(api::config_auth)
         .configure(api::config_game)
         .configure(api::config_user);
+
+    if settings_data.server.rate_limit_period_ms > 0 {
+        let rate_limit_config = GovernorConfigBuilder::default()
+            .period(std::time::Duration::from_millis(
+                settings_data.server.rate_limit_period_ms,
+            ))
+            .burst_size(settings_data.server.rate_limit_burst_size)
+            .finish()
+            .unwrap();
+        cfg.service(scope.wrap(Governor::new(&rate_limit_config)));
+    } else {
+        cfg.service(scope);
+    }
 }
 
 pub fn build_session_middleware(
@@ -42,26 +58,22 @@ pub fn build_session_middleware(
     SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
         .cookie_name("minesweeper-session".to_string())
         .cookie_secure(secure)
-        .cookie_same_site(actix_web::cookie::SameSite::Lax)
+        .cookie_same_site(actix_web::cookie::SameSite::Strict)
         .cookie_http_only(true)
         .cookie_path("/".to_string())
         .session_lifecycle(PersistentSession::default())
         .build()
 }
 
-pub fn build_cors_middleware(allowed_origins: &[String]) -> Cors {
+pub fn build_cors_middleware(_environment: &str, allowed_origins: &[String]) -> Cors {
     let mut cors = Cors::default()
         .allow_any_method()
         .allow_any_header()
         .supports_credentials()
         .max_age(3600);
 
-    if allowed_origins.is_empty() {
-        cors = cors.allow_any_origin();
-    } else {
-        for origin in allowed_origins {
-            cors = cors.allowed_origin(origin);
-        }
+    for origin in allowed_origins {
+        cors = cors.allowed_origin(origin);
     }
 
     cors
@@ -86,7 +98,20 @@ impl Application {
                     session_key.clone(),
                     settings.server.secure_cookies,
                 ))
-                .wrap(build_cors_middleware(&settings.server.allowed_origins))
+                .wrap(build_cors_middleware(
+                    &settings.environment,
+                    &settings.server.allowed_origins,
+                ))
+                .wrap(
+                    middleware::DefaultHeaders::new()
+                        .add((
+                            "Strict-Transport-Security",
+                            "max-age=31536000; includeSubDomains",
+                        ))
+                        .add(("X-Content-Type-Options", "nosniff"))
+                        .add(("X-Frame-Options", "DENY"))
+                        .add(("Content-Security-Policy", "default-src 'self'")),
+                )
                 .wrap(middleware::Logger::default())
                 .configure(|c| {
                     configure_app(
