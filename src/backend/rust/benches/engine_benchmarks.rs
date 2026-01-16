@@ -59,13 +59,13 @@ fn setup_zero_moves_game(cols: usize, rows: usize) -> MinesweeperGame {
     game.mines_generated = true;
 
     // Update neighbors of (0,0)
-    for dx in -1..=1 {
-        for dy in -1..=1 {
+    for dx in -1isize..=1 {
+        for dy in -1isize..=1 {
             if dx == 0 && dy == 0 {
                 continue;
             }
-            let nx = 0 as isize + dx;
-            let ny = 0 as isize + dy;
+            let nx = dx;
+            let ny = dy;
             if nx >= 0 && nx < cols as isize && ny >= 0 && ny < rows as isize {
                 game.board[nx as usize][ny as usize] = BoardState::One;
             }

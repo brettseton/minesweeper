@@ -1,5 +1,6 @@
 pub mod memory;
 pub mod mongo;
+pub mod redis;
 
 use crate::error::AppResult;
 use crate::model::{MinesweeperGame, Point};
@@ -8,12 +9,14 @@ use std::sync::Arc;
 
 pub use memory::InMemoryGameRepository;
 pub use mongo::MongoGameRepository;
+pub use self::redis::RedisGameRepository;
 
 #[async_trait]
 pub trait GameRepository: Send + Sync {
     async fn get_game(&self, id: i32) -> AppResult<Option<MinesweeperGame>>;
     async fn get_games_by_ids(&self, ids: &[i32]) -> AppResult<Vec<MinesweeperGame>>;
     async fn save(&self, game: MinesweeperGame) -> AppResult<()>;
+    async fn delete(&self, id: i32) -> AppResult<()>;
     async fn add_moves(&self, id: i32, points: &[Point]) -> AppResult<Option<MinesweeperGame>>;
     async fn add_flag(&self, id: i32, point: Point) -> AppResult<Option<MinesweeperGame>>;
     async fn remove_flag(&self, id: i32, point: Point) -> AppResult<Option<MinesweeperGame>>;
@@ -49,5 +52,39 @@ pub async fn init_repository(
     } else {
         tracing::info!("Using In-Memory Repository");
         Arc::new(InMemoryGameRepository::new())
+    }
+}
+
+pub async fn init_hot_repository(
+    settings: &crate::settings::RedisSettings,
+) -> Option<Arc<RedisGameRepository>> {
+    if let Some(ref addr) = settings.addr {
+        let redis_uri = if addr.starts_with("redis://") || addr.starts_with("rediss://") {
+            addr.to_string()
+        } else {
+            format!("redis://{}", addr)
+        };
+        tracing::info!("Using Redis for hot store at {}", redis_uri);
+
+        let max_attempts = 10;
+        for attempt in 1..=max_attempts {
+            match RedisGameRepository::new(&redis_uri, settings.ttl_seconds).await {
+                Ok(r) => return Some(Arc::new(r)),
+                Err(e) => {
+                    if attempt == max_attempts {
+                        tracing::error!("Failed to connect to Redis after {max_attempts} attempts: {e}");
+                        return None;
+                    }
+                    tracing::warn!(
+                        "Failed to connect to Redis (attempt {attempt}/{max_attempts}): {e}"
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                }
+            }
+        }
+        None
+    } else {
+        tracing::info!("Redis hot store not configured");
+        None
     }
 }

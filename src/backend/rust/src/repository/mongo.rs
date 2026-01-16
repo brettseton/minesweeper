@@ -1,9 +1,10 @@
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::model::{MinesweeperGame, Point};
 use crate::repository::{GameRepository, UserGameRepository};
 use async_trait::async_trait;
 use mongodb::{
-    bson::doc, options::FindOneAndUpdateOptions, options::ReturnDocument, Client, Collection,
+    bson::doc, options::FindOneAndUpdateOptions, options::ReplaceOptions, options::ReturnDocument,
+    Client, Collection,
 };
 use tracing::instrument;
 
@@ -64,14 +65,22 @@ impl GameRepository for MongoGameRepository {
         Ok(cursor.try_collect().await?)
     }
 
-    #[instrument(skip(self, game))]
     async fn save(&self, game: MinesweeperGame) -> AppResult<()> {
-        let options = mongodb::options::ReplaceOptions::builder()
-            .upsert(true)
-            .build();
+        let filter = doc! { "_id": game.id };
+        let options = ReplaceOptions::builder().upsert(true).build();
         self.collection
-            .replace_one(doc! { "_id": game.id }, game, options)
-            .await?;
+            .replace_one(filter, game, options)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn delete(&self, id: i32) -> AppResult<()> {
+        let filter = doc! { "_id": id };
+        self.collection
+            .delete_one(filter, None)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
         Ok(())
     }
 

@@ -84,6 +84,7 @@ pub async fn create_test_app(
                 addr: None,
                 name: "TestDB".to_string(),
             },
+            redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
             auth: rust_backend::settings::AuthSettings {
                 google_client_id: "id".to_string(),
                 google_client_secret: "secret".to_string(),
@@ -97,7 +98,8 @@ pub async fn create_test_app(
 
     let repo_data = web::Data::new(repo.clone());
     let engine = Arc::new(MinesweeperEngine);
-    let service: Arc<dyn GameService> = Arc::new(MinesweeperService::new(repo, engine));
+    let service: Arc<dyn GameService> =
+        Arc::new(MinesweeperService::new(repo, None, engine, settings.redis.clone()));
     let service_data = web::Data::new(service);
     let settings_data = web::Data::new(settings.clone());
     let secret_key = Key::generate();

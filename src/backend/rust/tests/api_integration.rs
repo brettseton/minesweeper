@@ -19,11 +19,15 @@ async fn get_point_by_type(
     game_id: i32,
     match_fn: impl Fn(BoardState) -> bool,
 ) -> Option<Point> {
-    let mut game = repo.get_game(game_id).await.unwrap().unwrap();
+    let mut game = repo
+        .get_game(game_id)
+        .await
+        .expect("repo.get_game failed")
+        .expect("game not found");
     if !game.mines_generated {
         let engine = MinesweeperEngine;
         engine.generate_mines(&mut game, Point { x: 0, y: 0 });
-        repo.save(game.clone()).await.unwrap();
+        repo.save(game.clone()).await.expect("repo.save failed");
     }
     for (x, row) in game.board.iter().enumerate() {
         for (y, cell) in row.iter().enumerate() {
@@ -409,12 +413,16 @@ macro_rules! define_api_tests {
 
             // Get safe points
             let safe_points_vec = {
-                let mut game = repo.get_game(new_game.id).await.unwrap().unwrap();
-                if !game.mines_generated {
-                    let engine = MinesweeperEngine;
-                    engine.generate_mines(&mut game, Point { x: 0, y: 0 });
-                    repo.save(game.clone()).await.unwrap();
-                }
+            let mut game = repo
+                .get_game(new_game.id)
+                .await
+                .expect("repo.get_game failed")
+                .expect("game not found");
+            if !game.mines_generated {
+                let engine = MinesweeperEngine;
+                engine.generate_mines(&mut game, Point { x: 0, y: 0 });
+                repo.save(game.clone()).await.expect("repo.save failed");
+            }
                 let mut points = Vec::new();
                 for x in 0..game.cols {
                     for y in 0..game.rows {
@@ -554,6 +562,251 @@ mod in_memory_tests {
     define_api_tests!(setup);
 }
 
+mod redis_tests {
+    use super::*;
+    use async_trait::async_trait;
+    use rand::Rng;
+    use redis::aio::ConnectionManager;
+    use redis::AsyncCommands;
+    use rust_backend::error::{AppError, AppResult};
+    use rust_backend::model::{MinesweeperGame, Point};
+    use rust_backend::repository::{GameRepository, UserGameRepository};
+    use std::sync::OnceLock;
+    use testcontainers::core::WaitFor;
+    use testcontainers::Image;
+
+    static DOCKER: Lazy<Cli> = Lazy::new(Cli::default);
+    static NODE: OnceLock<Container<'static, RedisImage>> = OnceLock::new();
+
+    #[derive(Default)]
+    struct RedisImage;
+
+    impl Image for RedisImage {
+        type Args = Vec<String>;
+
+        fn name(&self) -> String {
+            "redis".to_string()
+        }
+
+        fn tag(&self) -> String {
+            "7".to_string()
+        }
+
+        fn ready_conditions(&self) -> Vec<WaitFor> {
+            vec![WaitFor::message_on_stdout("Ready to accept connections")]
+        }
+
+        fn expose_ports(&self) -> Vec<u16> {
+            vec![6379]
+        }
+    }
+
+    struct RedisOnlyRepository {
+        manager: ConnectionManager,
+        namespace: String,
+    }
+
+    impl RedisOnlyRepository {
+        async fn new(redis_uri: &str, namespace: String) -> AppResult<Self> {
+            let client = redis::Client::open(redis_uri)
+                .map_err(|e| AppError::Internal(format!("Failed to connect to Redis: {e}")))?;
+            let manager = ConnectionManager::new(client).await.map_err(|e| {
+                AppError::Internal(format!("Failed to create Redis connection manager: {e}"))
+            })?;
+            Ok(Self { manager, namespace })
+        }
+
+        fn game_key(&self, id: i32) -> String {
+            format!("{}:game:{}", self.namespace, id)
+        }
+
+        fn game_owner_key(&self, id: i32) -> String {
+            format!("{}:game_owner:{}", self.namespace, id)
+        }
+
+        fn user_games_key(&self, user_id: &str) -> String {
+            format!("{}:user_games:{}", self.namespace, user_id)
+        }
+
+        const TTL_SECONDS: u64 = 24 * 60 * 60;
+    }
+
+    #[async_trait]
+    impl GameRepository for RedisOnlyRepository {
+        async fn get_game(&self, id: i32) -> AppResult<Option<MinesweeperGame>> {
+            let mut conn = self.manager.clone();
+            let val: Option<String> = conn
+                .get(self.game_key(id))
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            match val {
+                Some(json) => {
+                    let game = serde_json::from_str(&json)
+                        .map_err(|e| AppError::Internal(e.to_string()))?;
+                    Ok(Some(game))
+                }
+                None => Ok(None),
+            }
+        }
+
+        async fn get_games_by_ids(&self, ids: &[i32]) -> AppResult<Vec<MinesweeperGame>> {
+            if ids.is_empty() {
+                return Ok(vec![]);
+            }
+
+            let mut conn = self.manager.clone();
+            let keys: Vec<String> = ids.iter().map(|id| self.game_key(*id)).collect();
+            let vals: Vec<Option<String>> = conn
+                .mget(keys)
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+
+            let mut games = Vec::new();
+            for val in vals.into_iter().flatten() {
+                let game = serde_json::from_str(&val)
+                    .map_err(|e| AppError::Internal(e.to_string()))?;
+                games.push(game);
+            }
+            Ok(games)
+        }
+
+        async fn save(&self, game: MinesweeperGame) -> AppResult<()> {
+            let mut conn = self.manager.clone();
+            let json =
+                serde_json::to_string(&game).map_err(|e| AppError::Internal(e.to_string()))?;
+            let _: () = conn
+                .set_ex(self.game_key(game.id), json, Self::TTL_SECONDS)
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            Ok(())
+        }
+
+        async fn delete(&self, id: i32) -> AppResult<()> {
+            let mut conn = self.manager.clone();
+            let _: () = conn
+                .del(self.game_key(id))
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            let _: () = conn
+                .del(self.game_owner_key(id))
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            Ok(())
+        }
+
+        async fn add_moves(&self, id: i32, points: &[Point]) -> AppResult<Option<MinesweeperGame>> {
+            let mut game = match self.get_game(id).await? {
+                Some(g) => g,
+                None => return Ok(None),
+            };
+
+            for p in points {
+                game.moves.insert(*p);
+            }
+
+            self.save(game.clone()).await?;
+            Ok(Some(game))
+        }
+
+        async fn add_flag(&self, id: i32, point: Point) -> AppResult<Option<MinesweeperGame>> {
+            let mut game = match self.get_game(id).await? {
+                Some(g) => g,
+                None => return Ok(None),
+            };
+
+            game.flag_points.insert(point);
+            self.save(game.clone()).await?;
+            Ok(Some(game))
+        }
+
+        async fn remove_flag(&self, id: i32, point: Point) -> AppResult<Option<MinesweeperGame>> {
+            let mut game = match self.get_game(id).await? {
+                Some(g) => g,
+                None => return Ok(None),
+            };
+
+            game.flag_points.remove(&point);
+            self.save(game.clone()).await?;
+            Ok(Some(game))
+        }
+    }
+
+    #[async_trait]
+    impl UserGameRepository for RedisOnlyRepository {
+        async fn add_mapping(&self, user_id: &str, game_id: i32) -> AppResult<()> {
+            let mut conn = self.manager.clone();
+
+            let _: () = conn
+                .sadd(self.user_games_key(user_id), game_id.to_string())
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            let _: () = conn
+                .expire(self.user_games_key(user_id), Self::TTL_SECONDS as i64)
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+
+            let _: () = conn
+                .set_ex(
+                    self.game_owner_key(game_id),
+                    user_id,
+                    Self::TTL_SECONDS,
+                )
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+
+            Ok(())
+        }
+
+        async fn get_game_ids_by_user_id(&self, user_id: &str) -> AppResult<Vec<i32>> {
+            let mut conn = self.manager.clone();
+            let ids: Vec<String> = conn
+                .smembers(self.user_games_key(user_id))
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            Ok(ids.into_iter().filter_map(|s| s.parse::<i32>().ok()).collect())
+        }
+
+        async fn get_game_owner(&self, game_id: i32) -> AppResult<Option<String>> {
+            let mut conn = self.manager.clone();
+            let owner: Option<String> = conn
+                .get(self.game_owner_key(game_id))
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            Ok(owner)
+        }
+
+        async fn get_games_by_user_id(&self, user_id: &str) -> AppResult<Vec<MinesweeperGame>> {
+            let ids = self.get_game_ids_by_user_id(user_id).await?;
+            self.get_games_by_ids(&ids).await
+        }
+    }
+
+    async fn setup() -> (
+        impl actix_web::dev::Service<
+            actix_http::Request,
+            Response = actix_web::dev::ServiceResponse,
+            Error = actix_web::Error,
+        >,
+        Arc<dyn MinesweeperRepository>,
+        Option<bool>,
+    ) {
+        let node = NODE.get_or_init(|| DOCKER.run(RedisImage));
+        let host_port = node.get_host_port_ipv4(6379);
+        let redis_url = format!("redis://localhost:{host_port}");
+
+        let namespace = format!("MinesweeperTest_{}", rand::thread_rng().gen::<u64>());
+        let repo = RedisOnlyRepository::new(&redis_url, namespace)
+            .await
+            .expect("Failed to create Redis repo");
+        let repo_arc: Arc<dyn MinesweeperRepository> = Arc::new(repo);
+        let app = create_test_app(repo_arc.clone()).await;
+
+        (app, repo_arc, None)
+    }
+
+    define_api_tests!(setup);
+}
+
 mod mongo_tests {
     use super::*;
     use rand::Rng;
@@ -615,6 +868,7 @@ mod settings_tests {
                 addr: None,
                 name: "test".to_string(),
             },
+            redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
             auth: AuthSettings {
                 google_client_id: "id".to_string(),
                 google_client_secret: "secret".to_string(),
@@ -644,6 +898,7 @@ mod settings_tests {
                 addr: None,
                 name: "test".to_string(),
             },
+            redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
             auth: AuthSettings {
                 google_client_id: "id".to_string(),
                 google_client_secret: "secret".to_string(),

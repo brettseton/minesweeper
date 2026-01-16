@@ -42,8 +42,32 @@ impl Image for MongoImage {
     }
 }
 
+#[derive(Default)]
+pub struct RedisImage;
+
+impl Image for RedisImage {
+    type Args = Vec<String>;
+
+    fn name(&self) -> String {
+        "redis".to_string()
+    }
+
+    fn tag(&self) -> String {
+        "7".to_string()
+    }
+
+    fn ready_conditions(&self) -> Vec<WaitFor> {
+        vec![WaitFor::message_on_stdout("Ready to accept connections")]
+    }
+
+    fn expose_ports(&self) -> Vec<u16> {
+        vec![6379]
+    }
+}
+
 async fn setup_app(
     repo: Arc<dyn MinesweeperRepository>,
+    hot_repo: Option<Arc<rust_backend::repository::RedisGameRepository>>,
 ) -> impl actix_web::dev::Service<
     actix_http::Request,
     Response = actix_web::dev::ServiceResponse,
@@ -51,9 +75,6 @@ async fn setup_app(
 > {
     // Initialize metrics once
     MinesweeperMetrics::init();
-
-    let engine = Arc::new(MinesweeperEngine);
-    let service: Arc<dyn GameService> = Arc::new(MinesweeperService::new(repo.clone(), engine));
 
     let settings = Settings {
         environment: "development".to_string(),
@@ -69,6 +90,7 @@ async fn setup_app(
             addr: None,
             name: "TestDB".to_string(),
         },
+        redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
         auth: AuthSettings {
             google_client_id: "id".to_string(),
             google_client_secret: "secret".to_string(),
@@ -78,6 +100,10 @@ async fn setup_app(
             otlp_endpoint: "".to_string(),
         },
     };
+
+    let engine = Arc::new(MinesweeperEngine);
+    let service: Arc<dyn GameService> =
+        Arc::new(MinesweeperService::new(repo.clone(), hot_repo, engine, settings.redis.clone()));
 
     let repo_data = web::Data::new(repo);
     let service_data = web::Data::new(service);
@@ -97,7 +123,7 @@ fn api_benchmarks(c: &mut Criterion) {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .unwrap();
+        .expect("failed to build tokio runtime");
 
     let docker = Cli::default();
 
@@ -115,16 +141,39 @@ fn api_benchmarks(c: &mut Criterion) {
     });
     let mongo_repo: Arc<dyn MinesweeperRepository> = Arc::new(mongo_repo);
 
-    let repos: Vec<(&str, Arc<dyn MinesweeperRepository>)> =
-        vec![("InMemory", in_memory_repo), ("Mongo", mongo_repo)];
+    // Setup Redis for Hybrid
+    let redis_node = docker.run(RedisImage);
+    let redis_port = redis_node.get_host_port_ipv4(6379);
+    let redis_url = format!("redis://localhost:{}", redis_port);
+    let redis_repo = rt.block_on(async {
+        rust_backend::repository::RedisGameRepository::new(&redis_url, 24 * 60 * 60)
+            .await
+            .expect("Failed to create Redis repo")
+    });
+    let redis_repo: Arc<rust_backend::repository::RedisGameRepository> = Arc::new(redis_repo);
 
-    for (repo_type, repo) in repos {
-        let app = rt.block_on(setup_app(repo.clone()));
+    type BenchmarkConfig = (
+        &'static str,
+        Arc<dyn MinesweeperRepository>,
+        Option<Arc<rust_backend::repository::RedisGameRepository>>,
+    );
+
+    let benchmark_configs: Vec<BenchmarkConfig> = vec![
+        ("InMemory", in_memory_repo, None),
+        ("Mongo", mongo_repo.clone(), None),
+        ("Hybrid (Mongo + Redis)", mongo_repo, Some(redis_repo)),
+    ];
+
+    for (repo_type, repo, hot_repo) in benchmark_configs {
+        let app = rt.block_on(setup_app(repo.clone(), hot_repo));
+        let peer_addr = "127.0.0.1:12345"
+            .parse()
+            .expect("valid peer addr");
 
         // Create a game to use for existing game benchmarks
         let req = test::TestRequest::get()
             .uri("/game/new")
-            .peer_addr("127.0.0.1:12345".parse().unwrap())
+            .peer_addr(peer_addr)
             .to_request();
         let initial_game: MinesweeperGameDto = rt.block_on(async {
             let resp = test::call_service(&app, req).await;
@@ -138,7 +187,7 @@ fn api_benchmarks(c: &mut Criterion) {
             b.to_async(&rt).iter(|| async {
                 let req = test::TestRequest::get()
                     .uri("/game/new")
-                    .peer_addr("127.0.0.1:12345".parse().unwrap())
+                    .peer_addr(peer_addr)
                     .to_request();
                 let resp = test::call_service(&app, req).await;
                 if !resp.status().is_success() {
@@ -152,7 +201,7 @@ fn api_benchmarks(c: &mut Criterion) {
             b.to_async(&rt).iter(|| async {
                 let req = test::TestRequest::get()
                     .uri(&format!("/game/{}", game_id))
-                    .peer_addr("127.0.0.1:12345".parse().unwrap())
+                    .peer_addr(peer_addr)
                     .to_request();
                 let resp = test::call_service(&app, req).await;
                 if !resp.status().is_success() {
@@ -171,7 +220,7 @@ fn api_benchmarks(c: &mut Criterion) {
                 };
                 let req = test::TestRequest::post()
                     .uri(&format!("/game/{}", game_id))
-                    .peer_addr("127.0.0.1:12345".parse().unwrap())
+                    .peer_addr(peer_addr)
                     .set_json(&req_body)
                     .to_request();
                 let resp = test::call_service(&app, req).await;
@@ -191,7 +240,7 @@ fn api_benchmarks(c: &mut Criterion) {
                 };
                 let req = test::TestRequest::post()
                     .uri(&format!("/game/flag/{}", game_id))
-                    .peer_addr("127.0.0.1:12345".parse().unwrap())
+                    .peer_addr(peer_addr)
                     .set_json(&req_body)
                     .to_request();
                 let resp = test::call_service(&app, req).await;

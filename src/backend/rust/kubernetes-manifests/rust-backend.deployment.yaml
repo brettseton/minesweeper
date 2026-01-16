@@ -48,15 +48,20 @@ spec:
         - name: APP_ENVIRONMENT
           value: "development"
         - name: SESSION_SECRET_KEY
-          value: "development_dummy_secret_key_that_is_at_least_64_characters_long_12345"
+          valueFrom:
+            secretKeyRef:
+              name: rust-backend-secrets
+              key: SESSION_SECRET_KEY
         - name: RUST_LOG
           value: "info"
         - name: RATE_LIMIT_PERIOD_MS
-          value: "1"
+          value: "0"
         - name: RATE_LIMIT_BURST_SIZE
           value: "10000"
         - name: DB_ADDR
           value: "rust-mongodb:27017"
+        - name: REDIS_ADDR
+          value: "rust-redis:6379"
         - name: GOOGLE_CLIENT_ID
           valueFrom:
             secretKeyRef:

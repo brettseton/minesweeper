@@ -69,6 +69,15 @@ impl GameRepository for InMemoryGameRepository {
         Ok(())
     }
 
+    async fn delete(&self, id: i32) -> AppResult<()> {
+        let mut games = self
+            .games
+            .write()
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        games.remove(&id);
+        Ok(())
+    }
+
     async fn add_moves(&self, id: i32, points: &[Point]) -> AppResult<Option<MinesweeperGame>> {
         self.update_game(id, |game| {
             for p in points {
@@ -152,7 +161,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[tokio::test]
-    async fn test_in_memory_repo() {
+    async fn test_in_memory_repo() -> AppResult<()> {
         let repo = InMemoryGameRepository::new();
         let game = MinesweeperGame {
             id: 123,
@@ -167,18 +176,30 @@ mod tests {
             mine_count_target: 10,
         };
 
-        repo.save(game.clone()).await.unwrap();
-        let retrieved = repo.get_game(123).await.unwrap().unwrap();
+        repo.save(game.clone()).await?;
+        let retrieved = repo.get_game(123).await?.ok_or_else(|| {
+            AppError::Internal("Expected game to be present after save".to_string())
+        })?;
         assert_eq!(retrieved.id, 123);
 
         let p = Point { x: 1, y: 1 };
-        let updated = repo.add_moves(123, &[p]).await.unwrap().unwrap();
+        let updated = repo
+            .add_moves(123, &[p])
+            .await?
+            .ok_or_else(|| AppError::Internal("Expected game to be present after add_moves".into()))?;
         assert!(updated.moves.contains(&p));
 
-        let updated = repo.add_flag(123, p).await.unwrap().unwrap();
+        let updated = repo
+            .add_flag(123, p)
+            .await?
+            .ok_or_else(|| AppError::Internal("Expected game to be present after add_flag".into()))?;
         assert!(updated.flag_points.contains(&p));
 
-        let updated = repo.remove_flag(123, p).await.unwrap().unwrap();
+        let updated = repo.remove_flag(123, p).await?.ok_or_else(|| {
+            AppError::Internal("Expected game to be present after remove_flag".into())
+        })?;
         assert!(!updated.flag_points.contains(&p));
+
+        Ok(())
     }
 }

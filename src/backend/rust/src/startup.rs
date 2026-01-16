@@ -32,19 +32,32 @@ pub fn configure_app(
             }
         });
 
-    let scope = web::scope("")
-        .configure(api::config_auth)
-        .configure(api::config_game)
-        .configure(api::config_user);
+    let scope = if google_client.is_some() {
+        web::scope("")
+            .configure(api::config_auth)
+            .configure(api::config_game)
+            .configure(api::config_user)
+    } else {
+        web::scope("")
+            .configure(api::config_game)
+            .configure(api::config_user)
+    };
 
     if settings_data.server.rate_limit_period_ms > 0 {
-        let rate_limit_config = GovernorConfigBuilder::default()
+        let rate_limit_config = match GovernorConfigBuilder::default()
             .period(std::time::Duration::from_millis(
                 settings_data.server.rate_limit_period_ms,
             ))
             .burst_size(settings_data.server.rate_limit_burst_size)
             .finish()
-            .unwrap();
+        {
+            Some(cfg) => cfg,
+            None => {
+                tracing::warn!("Invalid rate limit configuration; disabling rate limiting");
+                cfg.service(scope);
+                return;
+            }
+        };
         cfg.service(scope.wrap(Governor::new(&rate_limit_config)));
     } else {
         cfg.service(scope);

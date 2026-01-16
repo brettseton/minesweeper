@@ -1,4 +1,5 @@
 use crate::auth::client::{get_callback_url, GoogleOAuthClient};
+use crate::auth::{build_state, parse_state};
 use crate::error::{AppError, AppResult};
 use crate::model::UserInfo;
 use actix_identity::Identity;
@@ -10,7 +11,7 @@ use openidconnect::{
     RedirectUrl, Scope, TokenResponse,
 };
 use serde::Deserialize;
-use tracing::{info, warn};
+use tracing::info;
 
 pub const SCOPE_ACCOUNT: &str = "/account";
 pub const PATH_LOGIN: &str = "/google-login";
@@ -20,37 +21,40 @@ pub const PATH_STATUS: &str = "/status";
 
 pub async fn google_login(
     google_client: web::Data<GoogleOAuthClient>,
-    session: Session,
     req: HttpRequest,
 ) -> AppResult<HttpResponse> {
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+    let nonce = Nonce::new_random();
 
     let callback_url = get_callback_url(&req);
     let client = google_client.client.clone().set_redirect_uri(
         RedirectUrl::new(callback_url).map_err(|e| AppError::Internal(e.to_string()))?,
     );
 
-    let (auth_url, csrf_token, nonce) = client
+    let state = {
+        let settings = req
+            .app_data::<web::Data<crate::settings::Settings>>()
+            .ok_or_else(|| AppError::Internal("Settings missing from app data".to_string()))?;
+        build_state(settings.as_ref(), nonce.secret(), pkce_verifier.secret())?
+    };
+
+    let (auth_url, _csrf_token, _nonce) = client
         .authorize_url(
             AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-            CsrfToken::new_random,
-            Nonce::new_random,
+            {
+                let state = state.clone();
+                move || CsrfToken::new(state.clone())
+            },
+            {
+                let nonce = nonce.clone();
+                move || nonce.clone()
+            },
         )
         .add_scope(Scope::new("openid".to_string()))
         .add_scope(Scope::new("profile".to_string()))
         .add_scope(Scope::new("email".to_string()))
         .set_pkce_challenge(pkce_challenge)
         .url();
-
-    session
-        .insert("csrf_token", csrf_token.secret().to_string())
-        .map_err(|e| AppError::Internal(format!("Failed to insert csrf_token: {}", e)))?;
-    session
-        .insert("nonce", nonce.secret().to_string())
-        .map_err(|e| AppError::Internal(format!("Failed to insert nonce: {}", e)))?;
-    session
-        .insert("pkce_verifier", pkce_verifier.secret().to_string())
-        .map_err(|e| AppError::Internal(format!("Failed to insert pkce_verifier: {}", e)))?;
 
     Ok(HttpResponse::Found()
         .append_header(("Location", auth_url.to_string()))
@@ -69,35 +73,10 @@ pub async fn google_callback(
     session: Session,
     req: HttpRequest,
 ) -> AppResult<HttpResponse> {
-    let csrf_token: String = session
-        .get("csrf_token")
-        .map_err(|e| AppError::BadRequest(format!("Session error: {}", e)))?
-        .ok_or_else(|| {
-            warn!("Missing CSRF token in session. Ensure you are using the correct hostname and not the IP address.");
-            AppError::BadRequest("Missing CSRF token".to_string())
-        })?;
-
-    let nonce: String = session
-        .get("nonce")
-        .map_err(|e| AppError::BadRequest(format!("Session error: {}", e)))?
-        .ok_or_else(|| AppError::BadRequest("Missing nonce".to_string()))?;
-
-    let pkce_verifier_str: String = session
-        .get("pkce_verifier")
-        .map_err(|e| AppError::BadRequest(format!("Session error: {}", e)))?
-        .ok_or_else(|| AppError::BadRequest("Missing pkce_verifier".to_string()))?;
-
-    session.remove("csrf_token");
-    session.remove("nonce");
-    session.remove("pkce_verifier");
-
-    if csrf_token != params.state {
-        warn!(
-            "CSRF token mismatch: expected {}, got {}",
-            csrf_token, params.state
-        );
-        return Err(AppError::BadRequest("CSRF token mismatch".to_string()));
-    }
+    let settings = req
+        .app_data::<web::Data<crate::settings::Settings>>()
+        .ok_or_else(|| AppError::Internal("Settings missing from app data".to_string()))?;
+    let (nonce, pkce_verifier_str) = parse_state(settings.as_ref(), &params.state)?;
 
     let callback_url = get_callback_url(&req);
     let client = google_client.client.clone().set_redirect_uri(

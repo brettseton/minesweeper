@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rust-redis
+  labels:
+    app: rust
+    tier: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rust
+      tier: cache
+  template:
+    metadata:
+      labels:
+        app: rust
+        tier: cache
+    spec:
+      containers:
+        - name: redis
+          image: redis:7
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "10m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"

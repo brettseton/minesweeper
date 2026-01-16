@@ -1,5 +1,6 @@
 pub mod client;
 pub mod identity;
+mod state;
 
 use actix_web::cookie::Key;
 use actix_web::web;
@@ -9,8 +10,16 @@ use crate::settings::Settings;
 
 pub use client::GoogleOAuthClient;
 pub use identity::IdentityExt;
+pub use state::{build_state, parse_state};
 
 pub async fn init_google_client(settings: &Settings) -> Option<web::Data<GoogleOAuthClient>> {
+    if settings.auth.google_client_id.trim().is_empty()
+        && settings.auth.google_client_secret.trim().is_empty()
+    {
+        warn!("Google OAuth disabled: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set");
+        return None;
+    }
+
     match GoogleOAuthClient::new(&settings.auth).await {
         Ok(client) => Some(web::Data::new(client)),
         Err(e) => {

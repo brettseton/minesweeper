@@ -31,7 +31,11 @@ pub fn init_telemetry(settings: &Settings) {
             .install_batch(runtime::Tokio)
         {
             Ok(tracer) => {
-                global::set_tracer_provider(tracer.provider().unwrap());
+                if let Some(provider) = tracer.provider() {
+                    global::set_tracer_provider(provider.clone());
+                } else {
+                    eprintln!("Tracer installed without provider; traces will not be exported");
+                }
                 telemetry_layer = Some(tracing_opentelemetry::layer().with_tracer(tracer));
             }
             Err(e) => eprintln!("Failed to install tracer: {}", e),
@@ -79,9 +83,13 @@ pub fn init_telemetry(settings: &Settings) {
     }
 
     // Initialize Tracing Subscriber
-    let filter = tracing_subscriber::EnvFilter::from_default_env()
-        .add_directive("info".parse().unwrap())
-        .add_directive("rust_backend=info".parse().unwrap());
+    let mut filter = tracing_subscriber::EnvFilter::from_default_env();
+    for directive in ["info", "rust_backend=info"] {
+        match directive.parse() {
+            Ok(d) => filter = filter.add_directive(d),
+            Err(e) => eprintln!("Invalid log directive '{directive}': {e}"),
+        }
+    }
 
     // Initialize the LogTracer to capture logs from the `log` crate and redirect them to tracing
     let _ = tracing_log::LogTracer::init();

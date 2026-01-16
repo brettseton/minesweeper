@@ -32,11 +32,10 @@ impl GoogleOAuthClient {
 }
 
 pub fn get_callback_url(req: &HttpRequest) -> String {
-    let settings = req
-        .app_data::<web::Data<crate::settings::Settings>>()
-        .unwrap();
-    if let Some(ref overridden) = settings.auth.google_redirect_uri {
-        return overridden.clone();
+    if let Some(settings) = req.app_data::<web::Data<crate::settings::Settings>>() {
+        if let Some(ref overridden) = settings.auth.google_redirect_uri {
+            return overridden.clone();
+        }
     }
     let conn = req.connection_info();
     format!(

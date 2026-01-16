@@ -11,6 +11,8 @@ pub enum AppError {
     NotFound(String),
     #[display("Bad Request: {_0}")]
     BadRequest(String),
+    #[display("Service Unavailable: {_0}")]
+    ServiceUnavailable(String),
     #[display("Unauthorized")]
     Unauthorized,
 }
@@ -26,6 +28,7 @@ impl ResponseError for AppError {
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
+            AppError::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
         }
     }
@@ -40,6 +43,9 @@ impl ResponseError for AppError {
             }
             AppError::BadRequest(ref e) => {
                 tracing::warn!("Security Event: Bad request: {}", e);
+            }
+            AppError::ServiceUnavailable(ref e) => {
+                tracing::warn!("Service unavailable: {}", e);
             }
             _ => {}
         }

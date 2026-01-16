@@ -6,8 +6,13 @@ resources:
   - rust-backend.service.yaml
   - mongodb.deployment.yaml
   - mongodb.service.yaml
+  - redis.deployment.yaml
+  - redis.service.yaml
 
 secretGenerator:
   - name: google-auth-secrets
     envs:
       - .auth.env
+  - name: rust-backend-secrets
+    envs:
+      - .session.env

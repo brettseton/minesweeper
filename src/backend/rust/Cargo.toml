@@ -3,6 +3,9 @@ name = "rust-backend"
 version = "0.1.0"
 edition = "2021"
 
+[lints.clippy]
+unwrap_used = "deny"
+
 [dependencies]
 
 actix-web = "4"
@@ -22,6 +25,8 @@ rand = "0.8"
 mongodb = "2.8"
 
 async-trait = "0.1"
+
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 
 futures-util = "0.3"
 
@@ -62,6 +67,9 @@ dotenvy = "0.15"
 derive_more = { version = "1.0", features = ["display"] }
 uuid = { version = "1.7", features = ["v4", "serde"] }
 config = "0.13"
+base64 = "0.22"
+chacha20poly1305 = "0.10"
+sha2 = "0.10"
 
 [dev-dependencies]
 testcontainers = "0.15"

@@ -11,6 +11,8 @@ pub struct Settings {
     #[serde(default)]
     pub database: DatabaseSettings,
     #[serde(default)]
+    pub redis: RedisSettings,
+    #[serde(default)]
     pub auth: AuthSettings,
     #[serde(default)]
     pub telemetry: TelemetrySettings,
@@ -49,6 +51,35 @@ pub struct DatabaseSettings {
     pub addr: Option<String>,
     #[serde(default = "default_db_name")]
     pub name: String,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct RedisSettings {
+    pub addr: Option<String>,
+    #[serde(default = "default_redis_ttl_seconds")]
+    pub ttl_seconds: u64,
+    #[serde(default = "default_snapshot_interval_seconds")]
+    pub snapshot_interval_seconds: u64,
+    #[serde(default = "default_redis_required_for_writes")]
+    pub required_for_writes: bool,
+    #[serde(default = "default_redis_required")]
+    pub required: bool,
+}
+
+fn default_redis_ttl_seconds() -> u64 {
+    24 * 60 * 60
+}
+
+fn default_snapshot_interval_seconds() -> u64 {
+    60
+}
+
+fn default_redis_required_for_writes() -> bool {
+    true
+}
+
+fn default_redis_required() -> bool {
+    false
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -145,6 +176,33 @@ impl Settings {
         if let Ok(addr) = env::var("DB_ADDR") {
             builder = builder.set_override("database.addr", addr)?;
         }
+        if let Ok(addr) = env::var("REDIS_ADDR") {
+            builder = builder.set_override("redis.addr", addr)?;
+        }
+        // Preferred long-term alias for REDIS_ADDR.
+        if let Ok(url) = env::var("REDIS_URL") {
+            builder = builder.set_override("redis.addr", url)?;
+        }
+        if let Ok(ttl) = env::var("ACTIVE_GAME_TTL_SECONDS") {
+            if let Ok(ttl) = ttl.parse::<u64>() {
+                builder = builder.set_override("redis.ttl_seconds", ttl)?;
+            }
+        }
+        if let Ok(interval) = env::var("SNAPSHOT_INTERVAL_SECONDS") {
+            if let Ok(interval) = interval.parse::<u64>() {
+                builder = builder.set_override("redis.snapshot_interval_seconds", interval)?;
+            }
+        }
+        if let Ok(required) = env::var("REDIS_REQUIRED_FOR_WRITES") {
+            builder = builder.set_override(
+                "redis.required_for_writes",
+                required.to_lowercase() == "true",
+            )?;
+        }
+        if let Ok(required) = env::var("REDIS_REQUIRED") {
+            builder = builder
+                .set_override("redis.required", required.to_lowercase() == "true")?;
+        }
         if let Ok(id) = env::var("GOOGLE_CLIENT_ID") {
             builder = builder.set_override("auth.google_client_id", id)?;
         }
@@ -172,12 +230,22 @@ impl Settings {
         if self.server.session_secret_key.len() < 64 {
             return Err("SESSION_SECRET_KEY must be at least 64 characters long".into());
         }
-        if self.auth.google_client_id.is_empty() {
-            return Err("GOOGLE_CLIENT_ID must be set".into());
+
+        // Google OAuth is optional: enable it by providing BOTH client id + secret.
+        // If only one is provided, fail closed to avoid a partially configured auth setup.
+        let google_id_empty = self.auth.google_client_id.trim().is_empty();
+        let google_secret_empty = self.auth.google_client_secret.trim().is_empty();
+        match (google_id_empty, google_secret_empty) {
+            (true, true) => {}
+            (false, false) => {}
+            _ => {
+                return Err(
+                    "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set (or both be empty to disable Google auth)"
+                        .into(),
+                );
+            }
         }
-        if self.auth.google_client_secret.is_empty() {
-            return Err("GOOGLE_CLIENT_SECRET must be set".into());
-        }
+
         Ok(())
     }
 }
