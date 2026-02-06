@@ -3,6 +3,7 @@ use openidconnect::core::{CoreClient, CoreProviderMetadata};
 use openidconnect::{ClientId, ClientSecret, IssuerUrl};
 
 use crate::api::auth::{PATH_CALLBACK, SCOPE_ACCOUNT};
+use crate::error::{AppError, AppResult};
 use crate::settings::AuthSettings;
 
 pub struct GoogleOAuthClient {
@@ -31,18 +32,27 @@ impl GoogleOAuthClient {
     }
 }
 
-pub fn get_callback_url(req: &HttpRequest) -> String {
-    if let Some(settings) = req.app_data::<web::Data<crate::settings::Settings>>() {
-        if let Some(ref overridden) = settings.auth.google_redirect_uri {
-            return overridden.clone();
+pub fn get_callback_url(req: &HttpRequest) -> AppResult<String> {
+    let settings = req
+        .app_data::<web::Data<crate::settings::Settings>>()
+        .ok_or_else(|| AppError::Internal("Settings missing from app data".to_string()))?;
+
+    if let Some(ref overridden) = settings.auth.google_redirect_uri {
+        let overridden = overridden.trim();
+        if !overridden.is_empty() {
+            return Ok(overridden.to_string());
         }
     }
-    let conn = req.connection_info();
-    format!(
-        "{}://{}{}{}",
-        conn.scheme(),
-        conn.host(),
-        SCOPE_ACCOUNT,
-        PATH_CALLBACK
-    )
+
+    if let Some(ref origin) = settings.server.public_origin {
+        let origin = origin.trim_end_matches('/').trim();
+        if !origin.is_empty() {
+            return Ok(format!("{origin}{SCOPE_ACCOUNT}{PATH_CALLBACK}"));
+        }
+    }
+
+    Err(AppError::Internal(
+        "OAuth callback URL not configured (set GOOGLE_REDIRECT_URI or SERVER__PUBLIC_ORIGIN)"
+            .to_string(),
+    ))
 }

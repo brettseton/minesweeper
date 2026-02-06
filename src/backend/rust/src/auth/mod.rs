@@ -10,7 +10,7 @@ use crate::settings::Settings;
 
 pub use client::GoogleOAuthClient;
 pub use identity::IdentityExt;
-pub use state::{build_state, parse_state};
+pub use state::{build_state, new_browser_nonce, parse_state};
 
 pub async fn init_google_client(settings: &Settings) -> Option<web::Data<GoogleOAuthClient>> {
     if settings.auth.google_client_id.trim().is_empty()

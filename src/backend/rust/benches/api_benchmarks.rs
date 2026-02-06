@@ -81,7 +81,11 @@ async fn setup_app(
         server: ServerSettings {
             port: 8080,
             secure_cookies: false,
+            public_origin: None,
             allowed_origins: vec![],
+            cors_supports_credentials: false,
+            cross_origin_cookies: false,
+            trusted_proxies: vec![],
             session_secret_key: "a".repeat(64),
             rate_limit_period_ms: 1,
             rate_limit_burst_size: 10000000,
@@ -90,10 +94,13 @@ async fn setup_app(
             addr: None,
             name: "TestDB".to_string(),
         },
-        redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
+        redis: rust_backend::settings::RedisSettings {
+            addr: None,
+            ..Default::default()
+        },
         auth: AuthSettings {
-            google_client_id: "id".to_string(),
-            google_client_secret: "secret".to_string(),
+            google_client_id: String::new(),
+            google_client_secret: String::new(),
             google_redirect_uri: None,
         },
         telemetry: TelemetrySettings {
@@ -102,8 +109,12 @@ async fn setup_app(
     };
 
     let engine = Arc::new(MinesweeperEngine);
-    let service: Arc<dyn GameService> =
-        Arc::new(MinesweeperService::new(repo.clone(), hot_repo, engine, settings.redis.clone()));
+    let service: Arc<dyn GameService> = Arc::new(MinesweeperService::new(
+        repo.clone(),
+        hot_repo,
+        engine,
+        settings.redis.clone(),
+    ));
 
     let repo_data = web::Data::new(repo);
     let service_data = web::Data::new(service);
@@ -113,7 +124,11 @@ async fn setup_app(
     test::init_service(
         App::new()
             .wrap(IdentityMiddleware::default())
-            .wrap(build_session_middleware(secret_key.clone(), false))
+            .wrap(build_session_middleware(
+                secret_key.clone(),
+                false,
+                actix_web::cookie::SameSite::Strict,
+            ))
             .configure(|c| configure_app(c, repo_data, service_data, None, settings_data)),
     )
     .await
@@ -166,12 +181,10 @@ fn api_benchmarks(c: &mut Criterion) {
 
     for (repo_type, repo, hot_repo) in benchmark_configs {
         let app = rt.block_on(setup_app(repo.clone(), hot_repo));
-        let peer_addr = "127.0.0.1:12345"
-            .parse()
-            .expect("valid peer addr");
+        let peer_addr = "127.0.0.1:12345".parse().expect("valid peer addr");
 
         // Create a game to use for existing game benchmarks
-        let req = test::TestRequest::get()
+        let req = test::TestRequest::post()
             .uri("/game/new")
             .peer_addr(peer_addr)
             .to_request();
@@ -185,7 +198,7 @@ fn api_benchmarks(c: &mut Criterion) {
 
         group.bench_function("create_new_game", |b| {
             b.to_async(&rt).iter(|| async {
-                let req = test::TestRequest::get()
+                let req = test::TestRequest::post()
                     .uri("/game/new")
                     .peer_addr(peer_addr)
                     .to_request();

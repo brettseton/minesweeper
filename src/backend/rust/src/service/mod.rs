@@ -1,4 +1,5 @@
 pub mod game;
+mod game_state_store;
 
 pub use game::MinesweeperService;
 
@@ -9,6 +10,11 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait GameService: Send + Sync {
     async fn get_game(&self, id: i32) -> AppResult<MinesweeperGame>;
+    async fn get_game_for_user(
+        &self,
+        id: i32,
+        user: Option<UserInfo>,
+    ) -> AppResult<MinesweeperGame>;
     async fn create_game(
         &self,
         cols: usize,

@@ -85,6 +85,29 @@ impl BoardEngine for MinesweeperEngine {
 }
 
 impl MinesweeperEngine {
+    fn is_diagonal_step_blocked(
+        &self,
+        game: &MinesweeperGame,
+        from: Point,
+        dx: isize,
+        dy: isize,
+    ) -> bool {
+        if dx == 0 || dy == 0 {
+            return false;
+        }
+
+        let side_a = Point {
+            x: (from.x as isize + dx) as usize,
+            y: from.y,
+        };
+        let side_b = Point {
+            x: from.x,
+            y: (from.y as isize + dy) as usize,
+        };
+
+        game.is_point_flagged(&side_a) && game.is_point_flagged(&side_b)
+    }
+
     fn get_zero_moves(&self, game: &MinesweeperGame, start: Point) -> Vec<Point> {
         let mut points = Vec::new();
         let mut visited = vec![false; game.cols * game.rows];
@@ -94,6 +117,9 @@ impl MinesweeperEngine {
         visited[start.x * game.rows + start.y] = true;
 
         while let Some(p) = queue.pop_front() {
+            if game.is_point_flagged(&p) {
+                continue;
+            }
             points.push(p);
 
             if game.board[p.x][p.y] == BoardState::Zero {
@@ -114,7 +140,14 @@ impl MinesweeperEngine {
 
                             if !visited[idx] {
                                 visited[idx] = true;
-                                queue.push_back(Point { x: nx, y: ny });
+                                let next = Point { x: nx, y: ny };
+                                if game.is_point_flagged(&next) {
+                                    continue;
+                                }
+                                if self.is_diagonal_step_blocked(game, p, dx, dy) {
+                                    continue;
+                                }
+                                queue.push_back(next);
                             }
                         }
                     }
@@ -123,5 +156,43 @@ impl MinesweeperEngine {
         }
 
         points
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BoardEngine, MinesweeperEngine};
+    use crate::model::{BoardState, MinesweeperGame, Point};
+    use chrono::Utc;
+    use std::collections::HashSet;
+
+    #[test]
+    fn zero_wave_does_not_expand_through_flag_barrier() {
+        let engine = MinesweeperEngine;
+        let mut flag_points = HashSet::new();
+        flag_points.insert(Point { x: 0, y: 1 }); // north of center
+        flag_points.insert(Point { x: 1, y: 2 }); // east of center
+        flag_points.insert(Point { x: 2, y: 1 }); // south of center
+        flag_points.insert(Point { x: 1, y: 0 }); // west of center
+
+        let game = MinesweeperGame {
+            id: 1,
+            board: vec![vec![BoardState::Zero; 3]; 3],
+            moves: HashSet::new(),
+            mine_points: HashSet::new(),
+            flag_points,
+            created_at: Utc::now(),
+            mines_generated: true,
+            cols: 3,
+            rows: 3,
+            mine_count_target: 0,
+        };
+
+        let revealed = engine.get_reveal_points(&game, Point { x: 0, y: 0 });
+        assert_eq!(
+            revealed,
+            vec![Point { x: 0, y: 0 }],
+            "zero-wave should stop when flags form a barrier around the center"
+        );
     }
 }

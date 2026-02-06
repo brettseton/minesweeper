@@ -46,7 +46,7 @@ macro_rules! define_api_tests {
             let (app, _repo, _node) = $setup_fn().await;
 
             let start_time = Utc::now();
-            let req = test::TestRequest::get()
+            let req = post()
                 .uri(&uri_new_game(10, 10, 10))
                 .to_request();
             let resp: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
@@ -60,7 +60,7 @@ macro_rules! define_api_tests {
             let (app, _repo, _node) = $setup_fn().await;
 
             // Header based auth injection
-            let req = test::TestRequest::get()
+            let req = post()
                 .uri(&uri_new_game(10, 10, 10))
                 .insert_header((X_MOCK_AUTH, "true"))
                 .to_request();
@@ -82,7 +82,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 100, 10))
                     .to_request(),
             )
@@ -113,7 +113,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 10))
                     .to_request(),
             )
@@ -124,7 +124,7 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_flag(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -132,7 +132,7 @@ macro_rules! define_api_tests {
 
             assert_eq!(game.board[0][0], BoardState::Flag);
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_flag(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -147,7 +147,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
@@ -163,13 +163,13 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_flag(new_game.id))
                 .set_json(&req_body)
                 .to_request();
             let flagged_game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -179,12 +179,79 @@ macro_rules! define_api_tests {
         }
 
         #[actix_web::test]
+        async fn zero_wave_does_not_reveal_flagged_cells() {
+            let (app, repo, _node) = $setup_fn().await;
+
+            let new_game: MinesweeperGameDto = test::call_and_read_body_json(
+                &app,
+                post()
+                    .uri(&uri_new_game(10, 10, 1))
+                    .to_request(),
+            )
+            .await;
+
+            let zero_point = get_point_by_type(&repo, new_game.id, |s| s == BoardState::Zero)
+                .await
+                .expect("No zero point found");
+
+            let mut neighbor = None;
+            for dx in -1..=1 {
+                for dy in -1..=1 {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+                    let nx = zero_point.x as isize + dx;
+                    let ny = zero_point.y as isize + dy;
+                    if (0..10).contains(&nx) && (0..10).contains(&ny) {
+                        neighbor = Some(Point {
+                            x: nx as usize,
+                            y: ny as usize,
+                        });
+                        break;
+                    }
+                }
+                if neighbor.is_some() {
+                    break;
+                }
+            }
+            let neighbor = neighbor.expect("No neighbor found for zero point");
+
+            // Flag a cell that would otherwise be revealed by the zero-wave.
+            let req_body = MakeMoveRequest {
+                x: neighbor.x,
+                y: neighbor.y,
+                game_id: Some(new_game.id),
+            };
+            let req = post()
+                .uri(&uri_flag(new_game.id))
+                .set_json(&req_body)
+                .to_request();
+            let flagged_game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
+            assert_eq!(flagged_game.board[neighbor.x][neighbor.y], BoardState::Flag);
+
+            // Click the zero cell; the flagged neighbor should remain flagged.
+            let req_body = MakeMoveRequest {
+                x: zero_point.x,
+                y: zero_point.y,
+                game_id: Some(new_game.id),
+            };
+            let req = post()
+                .uri(&uri_game(new_game.id))
+                .set_json(&req_body)
+                .to_request();
+            let game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
+
+            assert!(game.flag_points.contains(&neighbor));
+            assert_eq!(game.board[neighbor.x][neighbor.y], BoardState::Flag);
+        }
+
+        #[actix_web::test]
         async fn move_on_numbered_space_returns_correct_board_state() {
             let (app, repo, _node) = $setup_fn().await;
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
@@ -200,7 +267,7 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -226,7 +293,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
@@ -240,7 +307,7 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -255,7 +322,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
@@ -269,7 +336,7 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body_mine)
                 .to_request();
@@ -284,7 +351,7 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body_safe)
                 .to_request();
@@ -299,7 +366,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
@@ -315,14 +382,16 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
+                .insert_header((X_MOCK_AUTH, "true"))
                 .set_json(&req_body)
                 .to_request();
             let revealed_game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_flag(new_game.id))
+                .insert_header((X_MOCK_AUTH, "true"))
                 .set_json(&req_body)
                 .to_request();
             let flagged_game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
@@ -346,7 +415,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
+                post()
                     .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
@@ -357,7 +426,7 @@ macro_rules! define_api_tests {
                 y: 10,
                 game_id: Some(new_game.id),
             };
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -371,8 +440,8 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                test::TestRequest::get()
-                    .uri(&uri_new_game(10, 10, 1))
+                post()
+                    .uri(&uri_new_game(10, 10, 5))
                     .to_request(),
             )
             .await;
@@ -385,7 +454,7 @@ macro_rules! define_api_tests {
                 game_id: Some(new_game.id),
             };
 
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(new_game.id))
                 .set_json(&req_body)
                 .to_request();
@@ -404,25 +473,27 @@ macro_rules! define_api_tests {
         async fn history_reports_won_games_correctly() {
             let (app, repo, _node) = $setup_fn().await;
 
-            // Create game (small 3x3 with 1 mine to make winning easy)
-            let req = test::TestRequest::get()
-                .uri(&uri_new_game(3, 3, 1))
-                .insert_header((X_MOCK_AUTH, "true"))
-                .to_request();
-            let new_game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
+            let new_game: MinesweeperGameDto = test::call_and_read_body_json(
+                &app,
+                post()
+                    .uri(&uri_new_game(3, 3, 1))
+                    .insert_header((X_MOCK_AUTH, "true"))
+                    .to_request(),
+            )
+            .await;
 
             // Get safe points
             let safe_points_vec = {
-            let mut game = repo
-                .get_game(new_game.id)
-                .await
-                .expect("repo.get_game failed")
-                .expect("game not found");
-            if !game.mines_generated {
-                let engine = MinesweeperEngine;
-                engine.generate_mines(&mut game, Point { x: 0, y: 0 });
-                repo.save(game.clone()).await.expect("repo.save failed");
-            }
+                let mut game = repo
+                    .get_game(new_game.id)
+                    .await
+                    .expect("repo.get_game failed")
+                    .expect("game not found");
+                if !game.mines_generated {
+                    let engine = MinesweeperEngine;
+                    engine.generate_mines(&mut game, Point { x: 0, y: 0 });
+                    repo.save(game.clone()).await.expect("repo.save failed");
+                }
                 let mut points = Vec::new();
                 for x in 0..game.cols {
                     for y in 0..game.rows {
@@ -442,7 +513,7 @@ macro_rules! define_api_tests {
                     y: point.y,
                     game_id: Some(new_game.id),
                 };
-                let req = test::TestRequest::post()
+                let req = post()
                     .uri(&uri_game(new_game.id))
                     .insert_header((X_MOCK_AUTH, "true"))
                     .set_json(&req_body)
@@ -470,7 +541,7 @@ macro_rules! define_api_tests {
             let (app, _repo, _node) = $setup_fn().await;
 
             // Make a request without login but with Mock header
-            let req = test::TestRequest::get()
+            let req = post()
                 .uri(&uri_new_game(10, 10, 10))
                 .insert_header((X_MOCK_AUTH, "true"))
                 .to_request();
@@ -492,7 +563,7 @@ macro_rules! define_api_tests {
             let (app, _repo, _node) = $setup_fn().await;
 
             // User 1 creates a game
-            let req = test::TestRequest::get()
+            let req = post()
                 .uri(&uri_new_game(10, 10, 10))
                 .insert_header((X_MOCK_AUTH, "true"))
                 .insert_header(("X-User-Sub", "user-1"))
@@ -505,7 +576,7 @@ macro_rules! define_api_tests {
                 y: 0,
                 game_id: Some(game.id),
             };
-            let req = test::TestRequest::post()
+            let req = post()
                 .uri(&uri_game(game.id))
                 .insert_header((X_MOCK_AUTH, "true"))
                 .insert_header(("X-User-Sub", "user-2"))
@@ -520,7 +591,7 @@ macro_rules! define_api_tests {
         async fn create_game_fails_when_dimensions_too_large() {
             let (app, _repo, _node) = $setup_fn().await;
 
-            let req = test::TestRequest::get()
+            let req = post()
                 .uri(&uri_new_game(51, 50, 10))
                 .to_request();
             let resp = test::call_service(&app, req).await;
@@ -532,7 +603,7 @@ macro_rules! define_api_tests {
         async fn create_game_fails_when_too_many_mines() {
             let (app, _repo, _node) = $setup_fn().await;
 
-            let req = test::TestRequest::get()
+            let req = post()
                 .uri(&uri_new_game(10, 10, 100))
                 .to_request();
             let resp = test::call_service(&app, req).await;
@@ -560,6 +631,44 @@ mod in_memory_tests {
     }
 
     define_api_tests!(setup);
+
+    #[actix_web::test]
+    async fn prevent_reading_others_games() {
+        let (app, _repo, _node) = setup().await;
+
+        // User 1 creates a game
+        let req = post()
+            .uri(&uri_new_game(10, 10, 10))
+            .insert_header((X_MOCK_AUTH, "true"))
+            .insert_header(("X-User-Sub", "user-1"))
+            .to_request();
+        let game: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
+
+        // Unauthenticated read should be rejected for owned games
+        let req = test::TestRequest::get()
+            .uri(&uri_game(game.id))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), actix_web::http::StatusCode::UNAUTHORIZED);
+
+        // Wrong user should be rejected
+        let req = test::TestRequest::get()
+            .uri(&uri_game(game.id))
+            .insert_header((X_MOCK_AUTH, "true"))
+            .insert_header(("X-User-Sub", "user-2"))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), actix_web::http::StatusCode::UNAUTHORIZED);
+
+        // Owner should succeed
+        let req = test::TestRequest::get()
+            .uri(&uri_game(game.id))
+            .insert_header((X_MOCK_AUTH, "true"))
+            .insert_header(("X-User-Sub", "user-1"))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
+    }
 }
 
 mod redis_tests {
@@ -571,12 +680,10 @@ mod redis_tests {
     use rust_backend::error::{AppError, AppResult};
     use rust_backend::model::{MinesweeperGame, Point};
     use rust_backend::repository::{GameRepository, UserGameRepository};
-    use std::sync::OnceLock;
     use testcontainers::core::WaitFor;
     use testcontainers::Image;
 
     static DOCKER: Lazy<Cli> = Lazy::new(Cli::default);
-    static NODE: OnceLock<Container<'static, RedisImage>> = OnceLock::new();
 
     #[derive(Default)]
     struct RedisImage;
@@ -663,8 +770,8 @@ mod redis_tests {
 
             let mut games = Vec::new();
             for val in vals.into_iter().flatten() {
-                let game = serde_json::from_str(&val)
-                    .map_err(|e| AppError::Internal(e.to_string()))?;
+                let game =
+                    serde_json::from_str(&val).map_err(|e| AppError::Internal(e.to_string()))?;
                 games.push(game);
             }
             Ok(games)
@@ -746,11 +853,7 @@ mod redis_tests {
                 .map_err(|e| AppError::Internal(e.to_string()))?;
 
             let _: () = conn
-                .set_ex(
-                    self.game_owner_key(game_id),
-                    user_id,
-                    Self::TTL_SECONDS,
-                )
+                .set_ex(self.game_owner_key(game_id), user_id, Self::TTL_SECONDS)
                 .await
                 .map_err(|e| AppError::Internal(e.to_string()))?;
 
@@ -763,7 +866,10 @@ mod redis_tests {
                 .smembers(self.user_games_key(user_id))
                 .await
                 .map_err(|e| AppError::Internal(e.to_string()))?;
-            Ok(ids.into_iter().filter_map(|s| s.parse::<i32>().ok()).collect())
+            Ok(ids
+                .into_iter()
+                .filter_map(|s| s.parse::<i32>().ok())
+                .collect())
         }
 
         async fn get_game_owner(&self, game_id: i32) -> AppResult<Option<String>> {
@@ -788,9 +894,9 @@ mod redis_tests {
             Error = actix_web::Error,
         >,
         Arc<dyn MinesweeperRepository>,
-        Option<bool>,
+        Option<Container<'static, RedisImage>>,
     ) {
-        let node = NODE.get_or_init(|| DOCKER.run(RedisImage));
+        let node = DOCKER.run(RedisImage);
         let host_port = node.get_host_port_ipv4(6379);
         let redis_url = format!("redis://localhost:{host_port}");
 
@@ -801,7 +907,8 @@ mod redis_tests {
         let repo_arc: Arc<dyn MinesweeperRepository> = Arc::new(repo);
         let app = create_test_app(repo_arc.clone()).await;
 
-        (app, repo_arc, None)
+        // Keep the container alive for the duration of the test; drop cleans it up.
+        (app, repo_arc, Some(node))
     }
 
     define_api_tests!(setup);
@@ -810,10 +917,8 @@ mod redis_tests {
 mod mongo_tests {
     use super::*;
     use rand::Rng;
-    use std::sync::OnceLock;
 
     static DOCKER: Lazy<Cli> = Lazy::new(Cli::default);
-    static NODE: OnceLock<Container<'static, MongoImage>> = OnceLock::new();
 
     async fn setup() -> (
         impl actix_web::dev::Service<
@@ -822,12 +927,10 @@ mod mongo_tests {
             Error = actix_web::Error,
         >,
         Arc<dyn MinesweeperRepository>,
-        Option<bool>,
+        Option<Container<'static, MongoImage>>,
     ) {
-        let node = NODE.get_or_init(|| {
-            // Using a simple run call, ensuring we use unique DBs per test to avoid interference
-            DOCKER.run(MongoImage)
-        });
+        // Run a fresh container per test to guarantee cleanup on drop (no global caching).
+        let node = DOCKER.run(MongoImage);
 
         let host_port = node.get_host_port_ipv4(27017);
         let url = format!("mongodb://localhost:{}", host_port);
@@ -840,7 +943,8 @@ mod mongo_tests {
         let repo_arc: Arc<dyn MinesweeperRepository> = Arc::new(repo);
         let app = create_test_app(repo_arc.clone()).await;
 
-        (app, repo_arc, None)
+        // Keep the container alive for the duration of the test; drop cleans it up.
+        (app, repo_arc, Some(node))
     }
 
     define_api_tests!(setup);
@@ -859,7 +963,11 @@ mod settings_tests {
             server: ServerSettings {
                 port: 8080,
                 secure_cookies: true,
+                public_origin: None,
                 allowed_origins: vec![],
+                cors_supports_credentials: false,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
                 session_secret_key: "short".to_string(),
                 rate_limit_period_ms: 50,
                 rate_limit_burst_size: 50,
@@ -868,10 +976,13 @@ mod settings_tests {
                 addr: None,
                 name: "test".to_string(),
             },
-            redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
             auth: AuthSettings {
-                google_client_id: "id".to_string(),
-                google_client_secret: "secret".to_string(),
+                google_client_id: String::new(),
+                google_client_secret: String::new(),
                 google_redirect_uri: None,
             },
             telemetry: TelemetrySettings {
@@ -889,7 +1000,11 @@ mod settings_tests {
             server: ServerSettings {
                 port: 8080,
                 secure_cookies: false,
+                public_origin: None,
                 allowed_origins: vec![],
+                cors_supports_credentials: false,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
                 session_secret_key: "short".to_string(),
                 rate_limit_period_ms: 50,
                 rate_limit_burst_size: 50,
@@ -898,10 +1013,13 @@ mod settings_tests {
                 addr: None,
                 name: "test".to_string(),
             },
-            redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
             auth: AuthSettings {
-                google_client_id: "id".to_string(),
-                google_client_secret: "secret".to_string(),
+                google_client_id: String::new(),
+                google_client_secret: String::new(),
                 google_redirect_uri: None,
             },
             telemetry: TelemetrySettings {
@@ -910,5 +1028,257 @@ mod settings_tests {
         };
 
         assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn settings_validation_fails_in_production_when_secure_cookies_disabled() {
+        let settings = Settings {
+            environment: "production".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: false,
+                public_origin: None,
+                allowed_origins: vec!["https://example.com".to_string()],
+                cors_supports_credentials: true,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
+                session_secret_key: "a".repeat(64),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
+            auth: AuthSettings {
+                google_client_id: "".to_string(),
+                google_client_secret: "".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn settings_validation_fails_in_production_when_allowed_origins_missing() {
+        let settings = Settings {
+            environment: "production".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: true,
+                public_origin: None,
+                allowed_origins: vec![],
+                cors_supports_credentials: true,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
+                session_secret_key: "a".repeat(64),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
+            auth: AuthSettings {
+                google_client_id: "".to_string(),
+                google_client_secret: "".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn settings_validation_fails_in_production_when_allowed_origins_has_wildcard() {
+        let settings = Settings {
+            environment: "production".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: true,
+                public_origin: None,
+                allowed_origins: vec!["*".to_string()],
+                cors_supports_credentials: true,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
+                session_secret_key: "a".repeat(64),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
+            auth: AuthSettings {
+                google_client_id: "".to_string(),
+                google_client_secret: "".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn settings_validation_fails_in_production_when_allowed_origins_is_not_http_origin() {
+        let settings = Settings {
+            environment: "production".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: true,
+                public_origin: None,
+                allowed_origins: vec!["example.com".to_string()],
+                cors_supports_credentials: true,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
+                session_secret_key: "a".repeat(64),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
+            auth: AuthSettings {
+                google_client_id: "".to_string(),
+                google_client_secret: "".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn settings_validation_succeeds_in_production_with_secure_cookies_and_allowed_origins() {
+        let settings = Settings {
+            environment: "production".to_string(),
+            server: ServerSettings {
+                port: 8080,
+                secure_cookies: true,
+                public_origin: None,
+                allowed_origins: vec!["https://example.com".to_string()],
+                cors_supports_credentials: true,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
+                session_secret_key: "a".repeat(64),
+                rate_limit_period_ms: 50,
+                rate_limit_burst_size: 50,
+            },
+            database: DatabaseSettings {
+                addr: None,
+                name: "test".to_string(),
+            },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
+            auth: AuthSettings {
+                google_client_id: "".to_string(),
+                google_client_secret: "".to_string(),
+                google_redirect_uri: None,
+            },
+            telemetry: TelemetrySettings {
+                otlp_endpoint: "http://localhost:4317".to_string(),
+            },
+        };
+
+        assert!(settings.validate().is_ok());
+    }
+}
+
+#[cfg(test)]
+mod xsrf_tests {
+    use super::common::*;
+    use actix_web::http::StatusCode;
+    use actix_web::test;
+    use rust_backend::model::MakeMoveRequest;
+    use rust_backend::model::MinesweeperGameDto;
+    use rust_backend::repository::InMemoryGameRepository;
+    use std::sync::Arc;
+
+    #[actix_web::test]
+    async fn unsafe_requests_without_xsrf_header_are_allowed_when_origin_is_same() {
+        let repo = Arc::new(InMemoryGameRepository::new());
+        let app = create_test_app(repo.clone()).await;
+
+        // Create a game first (POST).
+        let new_game: MinesweeperGameDto = test::call_and_read_body_json(
+            &app,
+            post()
+                .uri(&uri_new_game(10, 10, 10))
+                .to_request(),
+        )
+        .await;
+
+        // POST without XSRF header/cookie, but with same-origin Origin header.
+        let req_body = MakeMoveRequest {
+            x: 0,
+            y: 0,
+            game_id: Some(new_game.id),
+        };
+        let req = test::TestRequest::post()
+            .uri(&uri_game(new_game.id))
+            .insert_header(("Host", "localhost"))
+            .insert_header(("Origin", "http://localhost"))
+            .set_json(&req_body)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_ne!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[actix_web::test]
+    async fn unsafe_requests_with_xsrf_header_still_work() {
+        let repo = Arc::new(InMemoryGameRepository::new());
+        let app = create_test_app(repo.clone()).await;
+
+        let new_game: MinesweeperGameDto = test::call_and_read_body_json(
+            &app,
+            post()
+                .uri(&uri_new_game(10, 10, 10))
+                .to_request(),
+        )
+        .await;
+
+        let req_body = MakeMoveRequest {
+            x: 0,
+            y: 0,
+            game_id: Some(new_game.id),
+        };
+        let req = post()
+            .uri(&uri_game(new_game.id))
+            .set_json(&req_body)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_ne!(resp.status(), StatusCode::FORBIDDEN);
     }
 }

@@ -4,10 +4,23 @@
 local game_ids = {}
 local counter = 0
 
+-- XSRF middleware requires either a same-origin Origin/Referer or a matching
+-- XSRF cookie + header pair for unsafe methods. Since `wrk` is not a browser,
+-- we always send an explicit token pair.
+function setup(thread)
+   math.randomseed(os.time())
+   thread:set("xsrf_token", tostring(math.random(100000000, 999999999)) .. tostring(os.time()))
+end
+
 -- Mock headers for potential auth bypass in test environments
 local common_headers = {
-   ["Content-Type"] = "application/json"
+   ["Content-Type"] = "application/json",
 }
+
+init = function(args)
+   common_headers["X-XSRF-TOKEN"] = xsrf_token
+   common_headers["Cookie"] = "XSRF-TOKEN=" .. xsrf_token
+end
 
 request = function()
    counter = counter + 1
@@ -18,10 +31,10 @@ request = function()
       return wrk.format("GET", "/account/status", common_headers)
    -- 5% chance to create a CUSTOM new game (15x15 with 30 mines)
    elseif r <= 20 then
-      return wrk.format("GET", "/game/new/15/15/30", common_headers)
+      return wrk.format("POST", "/game/new/15/15/30", common_headers)
    -- 10% chance to create a standard new game
    elseif r <= 30 or #game_ids == 0 then
-      return wrk.format("GET", "/game/new", common_headers)
+      return wrk.format("POST", "/game/new", common_headers)
    -- 40% chance to get an existing game state
    elseif r <= 70 then
       local id = game_ids[math.random(#game_ids)]

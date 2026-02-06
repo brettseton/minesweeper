@@ -34,6 +34,16 @@ spec:
       containers:
       - name: backend
         image: rust-backend
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
         resources:
           requests:
             memory: "128Mi"
@@ -44,6 +54,9 @@ spec:
         ports:
         - name: http-server
           containerPort: 8080
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         env:
         - name: APP_ENVIRONMENT
           value: "development"
@@ -76,3 +89,6 @@ spec:
           value: "http://localhost:4533/account/callback"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://signoz-otel-collector:4317"
+      volumes:
+      - name: tmp
+        emptyDir: {}

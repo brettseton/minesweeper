@@ -1,5 +1,6 @@
 use crate::error::{AppError, AppResult};
 use crate::model::{MinesweeperGame, Point};
+use crate::repository::MinesweeperGameDocument;
 use crate::repository::{GameRepository, UserGameRepository};
 use async_trait::async_trait;
 use mongodb::{
@@ -9,7 +10,7 @@ use mongodb::{
 use tracing::instrument;
 
 pub struct MongoGameRepository {
-    collection: Collection<MinesweeperGame>,
+    collection: Collection<MinesweeperGameDocument>,
     user_games_collection: Collection<UserGameMapping>,
 }
 
@@ -24,7 +25,7 @@ impl MongoGameRepository {
     pub async fn new(uri: &str, database: &str) -> mongodb::error::Result<Self> {
         let client = Client::with_uri_str(uri).await?;
         let db = client.database(database);
-        let collection = db.collection::<MinesweeperGame>("Games");
+        let collection = db.collection::<MinesweeperGameDocument>("Games");
         let user_games_collection = db.collection::<UserGameMapping>("UserGames");
         Ok(MongoGameRepository {
             collection,
@@ -43,7 +44,8 @@ impl MongoGameRepository {
         Ok(self
             .collection
             .find_one_and_update(doc! { "_id": id }, update, options)
-            .await?)
+            .await?
+            .map(Into::into))
     }
 }
 
@@ -51,7 +53,11 @@ impl MongoGameRepository {
 impl GameRepository for MongoGameRepository {
     #[instrument(skip(self))]
     async fn get_game(&self, id: i32) -> AppResult<Option<MinesweeperGame>> {
-        Ok(self.collection.find_one(doc! { "_id": id }, None).await?)
+        Ok(self
+            .collection
+            .find_one(doc! { "_id": id }, None)
+            .await?
+            .map(Into::into))
     }
 
     #[instrument(skip(self))]
@@ -62,14 +68,16 @@ impl GameRepository for MongoGameRepository {
             .collection
             .find(doc! { "_id": { "$in": ids_bson } }, None)
             .await?;
-        Ok(cursor.try_collect().await?)
+        let docs: Vec<MinesweeperGameDocument> = cursor.try_collect().await?;
+        Ok(docs.into_iter().map(Into::into).collect())
     }
 
     async fn save(&self, game: MinesweeperGame) -> AppResult<()> {
         let filter = doc! { "_id": game.id };
         let options = ReplaceOptions::builder().upsert(true).build();
+        let doc: MinesweeperGameDocument = (&game).into();
         self.collection
-            .replace_one(filter, game, options)
+            .replace_one(filter, doc, options)
             .await
             .map_err(|e| AppError::Internal(e.to_string()))?;
         Ok(())
@@ -151,6 +159,7 @@ impl UserGameRepository for MongoGameRepository {
             .collection
             .find(doc! { "_id": { "$in": ids_bson } }, None)
             .await?;
-        Ok(cursor.try_collect().await?)
+        let docs: Vec<MinesweeperGameDocument> = cursor.try_collect().await?;
+        Ok(docs.into_iter().map(Into::into).collect())
     }
 }

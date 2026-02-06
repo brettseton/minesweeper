@@ -4,10 +4,10 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use chacha20poly1305::aead::{Aead, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Nonce};
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::time::{SystemTime, UNIX_EPOCH};
-use rand::RngCore;
 
 const STATE_TTL_SECS: i64 = 10 * 60;
 const STATE_VERSION: u8 = 1;
@@ -18,6 +18,7 @@ struct OAuthState {
     exp_unix: i64,
     nonce: String,
     pkce_verifier: String,
+    browser_nonce: String,
 }
 
 fn now_unix() -> AppResult<i64> {
@@ -45,17 +46,22 @@ fn aead(settings: &Settings) -> ChaCha20Poly1305 {
     ChaCha20Poly1305::new((&key).into())
 }
 
-pub fn build_state(settings: &Settings, nonce: &str, pkce_verifier: &str) -> AppResult<String> {
+pub fn build_state(
+    settings: &Settings,
+    nonce: &str,
+    pkce_verifier: &str,
+    browser_nonce: &str,
+) -> AppResult<String> {
     let exp_unix = now_unix()? + STATE_TTL_SECS;
     let payload = OAuthState {
         v: STATE_VERSION,
         exp_unix,
         nonce: nonce.to_string(),
         pkce_verifier: pkce_verifier.to_string(),
+        browser_nonce: browser_nonce.to_string(),
     };
 
-    let plaintext =
-        serde_json::to_vec(&payload).map_err(|e| AppError::Internal(e.to_string()))?;
+    let plaintext = serde_json::to_vec(&payload).map_err(|e| AppError::Internal(e.to_string()))?;
 
     let mut nonce_bytes = [0u8; 12];
     rand::rngs::OsRng.fill_bytes(&mut nonce_bytes);
@@ -72,7 +78,7 @@ pub fn build_state(settings: &Settings, nonce: &str, pkce_verifier: &str) -> App
     Ok(URL_SAFE_NO_PAD.encode(token))
 }
 
-pub fn parse_state(settings: &Settings, token: &str) -> AppResult<(String, String)> {
+pub fn parse_state(settings: &Settings, token: &str) -> AppResult<(String, String, String)> {
     let bytes = URL_SAFE_NO_PAD
         .decode(token)
         .map_err(|_| AppError::BadRequest("Invalid OAuth state".to_string()))?;
@@ -86,11 +92,13 @@ pub fn parse_state(settings: &Settings, token: &str) -> AppResult<(String, Strin
         .decrypt(nonce, ciphertext)
         .map_err(|_| AppError::BadRequest("Invalid OAuth state".to_string()))?;
 
-    let state: OAuthState =
-        serde_json::from_slice(&plaintext).map_err(|_| AppError::BadRequest("Invalid OAuth state".to_string()))?;
+    let state: OAuthState = serde_json::from_slice(&plaintext)
+        .map_err(|_| AppError::BadRequest("Invalid OAuth state".to_string()))?;
 
     if state.v != STATE_VERSION {
-        return Err(AppError::BadRequest("Unsupported OAuth state version".to_string()));
+        return Err(AppError::BadRequest(
+            "Unsupported OAuth state version".to_string(),
+        ));
     }
 
     let now = now_unix()?;
@@ -102,5 +110,11 @@ pub fn parse_state(settings: &Settings, token: &str) -> AppResult<(String, Strin
         return Err(AppError::BadRequest("OAuth state invalid".to_string()));
     }
 
-    Ok((state.nonce, state.pkce_verifier))
+    Ok((state.nonce, state.pkce_verifier, state.browser_nonce))
+}
+
+pub fn new_browser_nonce() -> String {
+    let mut bytes = [0u8; 32];
+    rand::rngs::OsRng.fill_bytes(&mut bytes);
+    URL_SAFE_NO_PAD.encode(bytes)
 }

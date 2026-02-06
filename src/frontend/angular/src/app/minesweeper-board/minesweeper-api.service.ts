@@ -24,7 +24,7 @@ export class MinesweeperApiService {
   }
 
   getNewGame(cols: number = 10, rows: number = 10, mines: number = 10): Observable<MinesweeperGame> {
-    return this.http.get<MinesweeperGame>(`${this.baseUrl}game/new/${cols}/${rows}/${mines}`).pipe(
+    return this.http.post<MinesweeperGame>(`${this.baseUrl}game/new/${cols}/${rows}/${mines}`, {}).pipe(
       tap(() => this.gameCounter.add(1))
     );
   }

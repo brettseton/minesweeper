@@ -1,5 +1,6 @@
 use crate::api;
 use crate::auth::GoogleOAuthClient;
+use crate::middleware::xsrf::XsrfMiddleware;
 use crate::service::GameService;
 use crate::settings::Settings;
 use actix_cors::Cors;
@@ -67,23 +68,27 @@ pub fn configure_app(
 pub fn build_session_middleware(
     secret_key: Key,
     secure: bool,
+    same_site: actix_web::cookie::SameSite,
 ) -> SessionMiddleware<CookieSessionStore> {
     SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
         .cookie_name("minesweeper-session".to_string())
         .cookie_secure(secure)
-        .cookie_same_site(actix_web::cookie::SameSite::Strict)
+        .cookie_same_site(same_site)
         .cookie_http_only(true)
         .cookie_path("/".to_string())
         .session_lifecycle(PersistentSession::default())
         .build()
 }
 
-pub fn build_cors_middleware(_environment: &str, allowed_origins: &[String]) -> Cors {
+pub fn build_cors_middleware(allowed_origins: &[String], supports_credentials: bool) -> Cors {
     let mut cors = Cors::default()
         .allow_any_method()
         .allow_any_header()
-        .supports_credentials()
         .max_age(3600);
+
+    if supports_credentials {
+        cors = cors.supports_credentials();
+    }
 
     for origin in allowed_origins {
         cors = cors.allowed_origin(origin);
@@ -104,16 +109,31 @@ impl Application {
         let settings_data = web::Data::new(settings.clone());
 
         let server = HttpServer::new(move || {
+            let same_site = if settings.server.cross_origin_cookies {
+                actix_web::cookie::SameSite::None
+            } else {
+                actix_web::cookie::SameSite::Strict
+            };
+
             App::new()
+                .app_data(web::JsonConfig::default().limit(16384)) // 16KB limit
                 .wrap(RequestTracing::new())
+                .wrap(XsrfMiddleware::new(
+                    settings.server.secure_cookies,
+                    same_site,
+                    settings.server.public_origin.clone(),
+                    settings.server.allowed_origins.clone(),
+                    settings.server.trusted_proxies.clone(),
+                ))
                 .wrap(IdentityMiddleware::default())
                 .wrap(build_session_middleware(
                     session_key.clone(),
                     settings.server.secure_cookies,
+                    same_site,
                 ))
                 .wrap(build_cors_middleware(
-                    &settings.environment,
                     &settings.server.allowed_origins,
+                    settings.server.cors_supports_credentials,
                 ))
                 .wrap(
                     middleware::DefaultHeaders::new()

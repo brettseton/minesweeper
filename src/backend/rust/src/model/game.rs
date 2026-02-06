@@ -11,9 +11,7 @@ pub enum GameStatus {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "PascalCase")]
 pub struct MinesweeperGame {
-    #[serde(rename = "_id")]
     pub id: i32,
     pub board: Vec<Vec<BoardState>>,
     pub moves: HashSet<Point>,

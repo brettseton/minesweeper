@@ -15,17 +15,14 @@ pub const PATH_FLAG_ID: &str = "/flag/{id}";
 pub const PATH_ID: &str = "/{id}";
 
 pub async fn get_game(
-    id: Option<web::Path<i32>>,
+    id: web::Path<i32>,
     identity: Option<Identity>,
     service: web::Data<Arc<dyn GameService>>,
 ) -> AppResult<HttpResponse> {
-    let id = id.map(|p| p.into_inner()).unwrap_or(0);
+    let id = id.into_inner();
 
-    if id == 0 {
-        return new_game_default(service, identity).await;
-    }
-
-    let game = service.get_game(id).await?;
+    let user = identity.and_then(|id| id.user_info());
+    let game = service.get_game_for_user(id, user).await?;
     Ok(HttpResponse::Ok().json(MinesweeperGameDto::from(&game)))
 }
 
@@ -80,11 +77,10 @@ fn extract_request_params(path: Option<web::Path<i32>>, req: MakeMoveRequest) ->
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope(SCOPE_GAME)
-            .route(PATH_NEW, web::get().to(get_game))
-            .route(PATH_NEW_CUSTOM, web::get().to(new_game_custom))
+            .route(PATH_NEW, web::post().to(new_game_default))
+            .route(PATH_NEW_CUSTOM, web::post().to(new_game_custom))
             .route(PATH_FLAG, web::post().to(toggle_flag))
             .route(PATH_FLAG_ID, web::post().to(toggle_flag))
-            .route("", web::get().to(get_game))
             .route(PATH_ID, web::get().to(get_game))
             .route("", web::post().to(make_move))
             .route(PATH_ID, web::post().to(make_move)),

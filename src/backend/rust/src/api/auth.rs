@@ -1,10 +1,12 @@
 use crate::auth::client::{get_callback_url, GoogleOAuthClient};
-use crate::auth::{build_state, parse_state};
+use crate::auth::{build_state, new_browser_nonce, parse_state};
 use crate::error::{AppError, AppResult};
 use crate::model::UserInfo;
 use actix_identity::Identity;
 use actix_session::Session;
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use actix_web::cookie::time::Duration;
+use actix_web::cookie::{Cookie, SameSite};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, ResponseError};
 use openidconnect::core::CoreResponseType;
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, Nonce, PkceCodeChallenge, PkceCodeVerifier,
@@ -19,6 +21,28 @@ pub const PATH_CALLBACK: &str = "/callback";
 pub const PATH_LOGOUT: &str = "/google-logout";
 pub const PATH_STATUS: &str = "/status";
 
+const OAUTH_BINDING_COOKIE_NAME: &str = "oauth-login-nonce";
+
+fn build_oauth_binding_cookie(value: String, secure: bool) -> Cookie<'static> {
+    Cookie::build(OAUTH_BINDING_COOKIE_NAME, value)
+        .path(SCOPE_ACCOUNT)
+        .http_only(true)
+        .secure(secure)
+        .same_site(SameSite::Lax)
+        .max_age(Duration::seconds(10 * 60))
+        .finish()
+}
+
+fn clear_oauth_binding_cookie(secure: bool) -> Cookie<'static> {
+    Cookie::build(OAUTH_BINDING_COOKIE_NAME, "")
+        .path(SCOPE_ACCOUNT)
+        .http_only(true)
+        .secure(secure)
+        .same_site(SameSite::Lax)
+        .max_age(Duration::seconds(0))
+        .finish()
+}
+
 pub async fn google_login(
     google_client: web::Data<GoogleOAuthClient>,
     req: HttpRequest,
@@ -26,17 +50,24 @@ pub async fn google_login(
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
     let nonce = Nonce::new_random();
 
-    let callback_url = get_callback_url(&req);
+    let callback_url = get_callback_url(&req)?;
     let client = google_client.client.clone().set_redirect_uri(
         RedirectUrl::new(callback_url).map_err(|e| AppError::Internal(e.to_string()))?,
     );
 
-    let state = {
-        let settings = req
-            .app_data::<web::Data<crate::settings::Settings>>()
-            .ok_or_else(|| AppError::Internal("Settings missing from app data".to_string()))?;
-        build_state(settings.as_ref(), nonce.secret(), pkce_verifier.secret())?
-    };
+    let settings = req
+        .app_data::<web::Data<crate::settings::Settings>>()
+        .ok_or_else(|| AppError::Internal("Settings missing from app data".to_string()))?;
+
+    // Bind the OAuth state to the browser to prevent login CSRF.
+    // SameSite=Lax allows the cookie to be sent on the top-level Google redirect back to us.
+    let browser_nonce = new_browser_nonce();
+    let state = build_state(
+        settings.as_ref(),
+        nonce.secret(),
+        pkce_verifier.secret(),
+        &browser_nonce,
+    )?;
 
     let (auth_url, _csrf_token, _nonce) = client
         .authorize_url(
@@ -56,9 +87,13 @@ pub async fn google_login(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    Ok(HttpResponse::Found()
+    let cookie = build_oauth_binding_cookie(browser_nonce, settings.server.secure_cookies);
+    let mut resp = HttpResponse::Found()
         .append_header(("Location", auth_url.to_string()))
-        .finish())
+        .finish();
+    resp.add_cookie(&cookie)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(resp)
 }
 
 #[derive(Deserialize)]
@@ -76,9 +111,21 @@ pub async fn google_callback(
     let settings = req
         .app_data::<web::Data<crate::settings::Settings>>()
         .ok_or_else(|| AppError::Internal("Settings missing from app data".to_string()))?;
-    let (nonce, pkce_verifier_str) = parse_state(settings.as_ref(), &params.state)?;
+    let (nonce, pkce_verifier_str, browser_nonce_state) =
+        parse_state(settings.as_ref(), &params.state)?;
 
-    let callback_url = get_callback_url(&req);
+    // Enforce state binding cookie to prevent login CSRF.
+    let browser_nonce_cookie = req
+        .cookie(OAUTH_BINDING_COOKIE_NAME)
+        .map(|c| c.value().to_string());
+    if browser_nonce_cookie.as_deref() != Some(browser_nonce_state.as_str()) {
+        let mut resp = AppError::Forbidden.error_response();
+        resp.add_cookie(&clear_oauth_binding_cookie(settings.server.secure_cookies))
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        return Ok(resp);
+    }
+
+    let callback_url = get_callback_url(&req)?;
     let client = google_client.client.clone().set_redirect_uri(
         RedirectUrl::new(callback_url).map_err(|e| AppError::Internal(e.to_string()))?,
     );
@@ -116,9 +163,12 @@ pub async fn google_callback(
 
     info!("Successfully logged in user: {}", user_info.sub);
 
-    Ok(HttpResponse::Found()
+    let mut resp = HttpResponse::Found()
         .append_header(("Location", "/"))
-        .finish())
+        .finish();
+    resp.add_cookie(&clear_oauth_binding_cookie(settings.server.secure_cookies))
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(resp)
 }
 
 pub async fn google_logout(identity: Option<Identity>) -> HttpResponse {

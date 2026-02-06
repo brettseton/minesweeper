@@ -10,8 +10,8 @@ use tracing::info;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok();
-    let settings = Settings::new()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    let settings =
+        Settings::new().map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
     telemetry::init_telemetry(&settings);
 
     let repo = repository::init_repository(&settings.database).await;
@@ -20,8 +20,9 @@ async fn main() -> std::io::Result<()> {
     let hot_repo = repository::init_hot_repository(&settings.redis).await;
 
     let engine = Arc::new(MinesweeperEngine);
-    let game_service: Arc<dyn rust_backend::service::GameService> =
-        Arc::new(MinesweeperService::new(repo.clone(), hot_repo, engine, settings.redis.clone()));
+    let game_service: Arc<dyn rust_backend::service::GameService> = Arc::new(
+        MinesweeperService::new(repo.clone(), hot_repo, engine, settings.redis.clone()),
+    );
     let service_data = web::Data::new(game_service);
 
     let google_client = auth::init_google_client(&settings).await;

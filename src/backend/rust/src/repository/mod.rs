@@ -1,3 +1,4 @@
+mod document;
 pub mod memory;
 pub mod mongo;
 pub mod redis;
@@ -7,9 +8,10 @@ use crate::model::{MinesweeperGame, Point};
 use async_trait::async_trait;
 use std::sync::Arc;
 
+pub use self::redis::RedisGameRepository;
+pub(crate) use document::MinesweeperGameDocument;
 pub use memory::InMemoryGameRepository;
 pub use mongo::MongoGameRepository;
-pub use self::redis::RedisGameRepository;
 
 #[async_trait]
 pub trait GameRepository: Send + Sync {
@@ -38,7 +40,7 @@ pub async fn init_repository(
 ) -> Arc<dyn MinesweeperRepository> {
     if let Some(ref addr) = settings.addr {
         let mongo_uri = format!("mongodb://{}", addr);
-        tracing::info!("Using MongoDB at {}", mongo_uri);
+        tracing::info!("Using MongoDB repository");
         match MongoGameRepository::new(&mongo_uri, &settings.name).await {
             Ok(r) => Arc::new(r),
             Err(e) => {
@@ -64,7 +66,7 @@ pub async fn init_hot_repository(
         } else {
             format!("redis://{}", addr)
         };
-        tracing::info!("Using Redis for hot store at {}", redis_uri);
+        tracing::info!("Using Redis hot store");
 
         let max_attempts = 10;
         for attempt in 1..=max_attempts {
@@ -72,7 +74,9 @@ pub async fn init_hot_repository(
                 Ok(r) => return Some(Arc::new(r)),
                 Err(e) => {
                     if attempt == max_attempts {
-                        tracing::error!("Failed to connect to Redis after {max_attempts} attempts: {e}");
+                        tracing::error!(
+                            "Failed to connect to Redis after {max_attempts} attempts: {e}"
+                        );
                         return None;
                     }
                     tracing::warn!(

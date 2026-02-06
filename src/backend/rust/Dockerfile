@@ -23,5 +23,8 @@ FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/target/release/rust-backend /usr/local/bin/rust-backend
+RUN useradd --system --uid 10001 --create-home --home-dir /home/appuser appuser \
+    && chown -R appuser:appuser /app
+USER appuser
 ENV RUST_LOG=info
 ENTRYPOINT ["/usr/local/bin/rust-backend"]

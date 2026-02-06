@@ -183,16 +183,14 @@ mod tests {
         assert_eq!(retrieved.id, 123);
 
         let p = Point { x: 1, y: 1 };
-        let updated = repo
-            .add_moves(123, &[p])
-            .await?
-            .ok_or_else(|| AppError::Internal("Expected game to be present after add_moves".into()))?;
+        let updated = repo.add_moves(123, &[p]).await?.ok_or_else(|| {
+            AppError::Internal("Expected game to be present after add_moves".into())
+        })?;
         assert!(updated.moves.contains(&p));
 
-        let updated = repo
-            .add_flag(123, p)
-            .await?
-            .ok_or_else(|| AppError::Internal("Expected game to be present after add_flag".into()))?;
+        let updated = repo.add_flag(123, p).await?.ok_or_else(|| {
+            AppError::Internal("Expected game to be present after add_flag".into())
+        })?;
         assert!(updated.flag_points.contains(&p));
 
         let updated = repo.remove_flag(123, p).await?.ok_or_else(|| {

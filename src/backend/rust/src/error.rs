@@ -15,6 +15,8 @@ pub enum AppError {
     ServiceUnavailable(String),
     #[display("Unauthorized")]
     Unauthorized,
+    #[display("Forbidden")]
+    Forbidden,
 }
 
 #[derive(Serialize)]
@@ -30,6 +32,7 @@ impl ResponseError for AppError {
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
         }
     }
 
@@ -40,6 +43,9 @@ impl ResponseError for AppError {
             }
             AppError::Unauthorized => {
                 tracing::warn!("Security Event: Unauthorized access attempt");
+            }
+            AppError::Forbidden => {
+                tracing::warn!("Security Event: Forbidden request");
             }
             AppError::BadRequest(ref e) => {
                 tracing::warn!("Security Event: Bad request: {}", e);

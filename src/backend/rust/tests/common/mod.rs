@@ -2,6 +2,7 @@ use actix_web::dev::{Service, ServiceRequest, ServiceResponse};
 use actix_web::{cookie::Key, test, web, App, HttpMessage};
 use once_cell::sync::Lazy;
 use rust_backend::api;
+use rust_backend::middleware::xsrf::{XsrfMiddleware, XSRF_COOKIE_NAME, XSRF_HEADER_NAME};
 use rust_backend::repository::MinesweeperRepository;
 use rust_backend::service::{GameService, MinesweeperService};
 use rust_backend::startup::{build_session_middleware, configure_app, IdentityMiddleware};
@@ -13,6 +14,7 @@ static INIT: Lazy<()> = Lazy::new(|| {
 });
 
 pub const X_MOCK_AUTH: &str = "X-Mock-Auth";
+pub const TEST_XSRF_TOKEN: &str = "test-xsrf-token";
 
 pub fn uri_user_games() -> String {
     format!("{}{}", api::SCOPE_USER, api::PATH_GAMES)
@@ -60,6 +62,39 @@ where
 use rust_backend::engine::MinesweeperEngine;
 use rust_backend::settings::Settings;
 
+fn with_test_xsrf(mut req: test::TestRequest) -> test::TestRequest {
+    req = req.cookie(actix_web::cookie::Cookie::new(
+        XSRF_COOKIE_NAME,
+        TEST_XSRF_TOKEN,
+    ));
+    req.insert_header((XSRF_HEADER_NAME, TEST_XSRF_TOKEN))
+}
+
+#[allow(dead_code)]
+pub fn get() -> test::TestRequest {
+    test::TestRequest::get()
+}
+
+#[allow(dead_code)]
+pub fn post() -> test::TestRequest {
+    with_test_xsrf(test::TestRequest::post())
+}
+
+#[allow(dead_code)]
+pub fn put() -> test::TestRequest {
+    with_test_xsrf(test::TestRequest::put())
+}
+
+#[allow(dead_code)]
+pub fn patch() -> test::TestRequest {
+    with_test_xsrf(test::TestRequest::patch())
+}
+
+#[allow(dead_code)]
+pub fn delete() -> test::TestRequest {
+    with_test_xsrf(test::TestRequest::delete())
+}
+
 pub async fn create_test_app(
     repo: Arc<dyn MinesweeperRepository>,
 ) -> impl actix_web::dev::Service<
@@ -75,7 +110,11 @@ pub async fn create_test_app(
             server: rust_backend::settings::ServerSettings {
                 port: 8080,
                 secure_cookies: false,
+                public_origin: None,
                 allowed_origins: vec![],
+                cors_supports_credentials: false,
+                cross_origin_cookies: false,
+                trusted_proxies: vec![],
                 session_secret_key: "a".repeat(64),
                 rate_limit_period_ms: 0,
                 rate_limit_burst_size: 0,
@@ -84,10 +123,13 @@ pub async fn create_test_app(
                 addr: None,
                 name: "TestDB".to_string(),
             },
-            redis: rust_backend::settings::RedisSettings { addr: None, ..Default::default() },
+            redis: rust_backend::settings::RedisSettings {
+                addr: None,
+                ..Default::default()
+            },
             auth: rust_backend::settings::AuthSettings {
-                google_client_id: "id".to_string(),
-                google_client_secret: "secret".to_string(),
+                google_client_id: String::new(),
+                google_client_secret: String::new(),
                 google_redirect_uri: None,
             },
             telemetry: rust_backend::settings::TelemetrySettings {
@@ -98,8 +140,12 @@ pub async fn create_test_app(
 
     let repo_data = web::Data::new(repo.clone());
     let engine = Arc::new(MinesweeperEngine);
-    let service: Arc<dyn GameService> =
-        Arc::new(MinesweeperService::new(repo, None, engine, settings.redis.clone()));
+    let service: Arc<dyn GameService> = Arc::new(MinesweeperService::new(
+        repo,
+        None,
+        engine,
+        settings.redis.clone(),
+    ));
     let service_data = web::Data::new(service);
     let settings_data = web::Data::new(settings.clone());
     let secret_key = Key::generate();
@@ -107,8 +153,20 @@ pub async fn create_test_app(
     test::init_service(
         App::new()
             .wrap_fn(mock_auth_middleware)
+            // In tests, we still enforce XSRF on unsafe methods, but use a fixed token.
+            .wrap(XsrfMiddleware::new(
+                false,
+                actix_web::cookie::SameSite::Strict,
+                None,
+                vec![],
+                vec![],
+            ))
             .wrap(IdentityMiddleware::default())
-            .wrap(build_session_middleware(secret_key.clone(), false))
+            .wrap(build_session_middleware(
+                secret_key.clone(),
+                false,
+                actix_web::cookie::SameSite::Strict,
+            ))
             .configure(|c| configure_app(c, repo_data, service_data, None, settings_data)),
     )
     .await
