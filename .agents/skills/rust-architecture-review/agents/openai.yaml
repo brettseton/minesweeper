@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust Architecture Review"
+  short_description: "Senior Rust backend review and scoring rubric"
+  default_prompt: "Use $rust-architecture-review to review @src/backend/rust/ in all aspects and score architecture, software pattern usage, SOLID, DRY, and security out of 5."
