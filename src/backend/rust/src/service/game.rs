@@ -82,9 +82,9 @@ impl GameService for MinesweeperService {
             ));
         }
 
-        let total_cells = cols
-            .checked_mul(rows)
-            .ok_or_else(|| AppError::BadRequest("Board dimensions result in overflow".to_string()))?;
+        let total_cells = cols.checked_mul(rows).ok_or_else(|| {
+            AppError::BadRequest("Board dimensions result in overflow".to_string())
+        })?;
 
         if total_cells > 2500 {
             return Err(AppError::BadRequest(

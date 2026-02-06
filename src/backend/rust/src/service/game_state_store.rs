@@ -78,16 +78,6 @@ impl GameStateStore {
         self.index.associate_user_game(user_id, game_id).await
     }
 
-    pub async fn persist_moves_without_hot_store(
-        &self,
-        game_id: i32,
-        reveal_points: &[crate::model::Point],
-    ) -> AppResult<()> {
-        self.writer
-            .persist_moves_without_hot_store(game_id, reveal_points)
-            .await
-    }
-
     pub async fn persist_toggle_flag_with_hot_version(
         &self,
         game: &MinesweeperGame,
@@ -107,7 +97,7 @@ impl GameStateStore {
         &self,
         game_id: i32,
         game: &MinesweeperGame,
-        reveal_points: &[Point],
+        _reveal_points: &[Point],
         is_over: bool,
         expected_hot_version: Option<i64>,
     ) -> AppResult<PersistResult> {
@@ -434,15 +424,6 @@ impl GameWriter {
         }
     }
 
-    async fn persist_moves_without_hot_store(
-        &self,
-        game_id: i32,
-        reveal_points: &[crate::model::Point],
-    ) -> AppResult<()> {
-        let _ = self.repo.add_moves(game_id, reveal_points).await?;
-        Ok(())
-    }
-
     async fn persist_full_without_hot_store(&self, game: &MinesweeperGame) -> AppResult<()> {
         self.repo.save(game.clone()).await
     }
@@ -556,7 +537,10 @@ mod tests {
             rows: 3,
             mine_count_target: 1,
         };
-        store.persist_new_game(&initial).await.unwrap();
+        store
+            .persist_new_game(&initial)
+            .await
+            .expect("persist_new_game should succeed");
 
         let mut updated = initial.clone();
         updated.mines_generated = true;
@@ -567,13 +551,13 @@ mod tests {
         let result = store
             .persist_move_with_hot_version(game_id, &updated, &[reveal_point], false, None)
             .await
-            .unwrap();
+            .expect("persist_move_with_hot_version should succeed");
         assert_eq!(result, PersistResult::Saved);
 
         let persisted = repo
             .get_game(game_id)
             .await
-            .unwrap()
+            .expect("get_game should succeed")
             .expect("game should exist");
 
         assert!(persisted.moves.contains(&reveal_point));

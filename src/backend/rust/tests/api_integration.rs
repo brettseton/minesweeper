@@ -46,9 +46,7 @@ macro_rules! define_api_tests {
             let (app, _repo, _node) = $setup_fn().await;
 
             let start_time = Utc::now();
-            let req = post()
-                .uri(&uri_new_game(10, 10, 10))
-                .to_request();
+            let req = post().uri(&uri_new_game(10, 10, 10)).to_request();
             let resp: MinesweeperGameDto = test::call_and_read_body_json(&app, req).await;
 
             assert!(resp.created_at >= start_time - chrono::Duration::seconds(10));
@@ -82,9 +80,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 100, 10))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 100, 10)).to_request(),
             )
             .await;
             let game: MinesweeperGameDto = test::call_and_read_body_json(
@@ -113,9 +109,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 10))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 10)).to_request(),
             )
             .await;
             let req_body = MakeMoveRequest {
@@ -147,9 +141,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
             let safe_point = get_point_by_type(&repo, new_game.id, |s| {
@@ -184,9 +176,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 1))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 1)).to_request(),
             )
             .await;
 
@@ -251,9 +241,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
             let number_point = get_point_by_type(&repo, new_game.id, |s| {
@@ -293,9 +281,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
             let mine_point = get_point_by_type(&repo, new_game.id, |s| s == BoardState::Mine)
@@ -322,9 +308,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
             let mine_point = get_point_by_type(&repo, new_game.id, |s| s == BoardState::Mine)
@@ -366,9 +350,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
             let number_point = get_point_by_type(&repo, new_game.id, |s| {
@@ -415,9 +397,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
 
@@ -440,9 +420,7 @@ macro_rules! define_api_tests {
 
             let new_game: MinesweeperGameDto = test::call_and_read_body_json(
                 &app,
-                post()
-                    .uri(&uri_new_game(10, 10, 5))
-                    .to_request(),
+                post().uri(&uri_new_game(10, 10, 5)).to_request(),
             )
             .await;
             let zero_point = get_point_by_type(&repo, new_game.id, |s| s == BoardState::Zero)
@@ -591,9 +569,7 @@ macro_rules! define_api_tests {
         async fn create_game_fails_when_dimensions_too_large() {
             let (app, _repo, _node) = $setup_fn().await;
 
-            let req = post()
-                .uri(&uri_new_game(51, 50, 10))
-                .to_request();
+            let req = post().uri(&uri_new_game(51, 50, 10)).to_request();
             let resp = test::call_service(&app, req).await;
 
             assert_eq!(resp.status(), actix_web::http::StatusCode::BAD_REQUEST);
@@ -603,9 +579,7 @@ macro_rules! define_api_tests {
         async fn create_game_fails_when_too_many_mines() {
             let (app, _repo, _node) = $setup_fn().await;
 
-            let req = post()
-                .uri(&uri_new_game(10, 10, 100))
-                .to_request();
+            let req = post().uri(&uri_new_game(10, 10, 100)).to_request();
             let resp = test::call_service(&app, req).await;
 
             assert_eq!(resp.status(), actix_web::http::StatusCode::BAD_REQUEST);
@@ -1232,13 +1206,9 @@ mod xsrf_tests {
         let app = create_test_app(repo.clone()).await;
 
         // Create a game first (POST).
-        let new_game: MinesweeperGameDto = test::call_and_read_body_json(
-            &app,
-            post()
-                .uri(&uri_new_game(10, 10, 10))
-                .to_request(),
-        )
-        .await;
+        let new_game: MinesweeperGameDto =
+            test::call_and_read_body_json(&app, post().uri(&uri_new_game(10, 10, 10)).to_request())
+                .await;
 
         // POST without XSRF header/cookie, but with same-origin Origin header.
         let req_body = MakeMoveRequest {
@@ -1261,13 +1231,9 @@ mod xsrf_tests {
         let repo = Arc::new(InMemoryGameRepository::new());
         let app = create_test_app(repo.clone()).await;
 
-        let new_game: MinesweeperGameDto = test::call_and_read_body_json(
-            &app,
-            post()
-                .uri(&uri_new_game(10, 10, 10))
-                .to_request(),
-        )
-        .await;
+        let new_game: MinesweeperGameDto =
+            test::call_and_read_body_json(&app, post().uri(&uri_new_game(10, 10, 10)).to_request())
+                .await;
 
         let req_body = MakeMoveRequest {
             x: 0,

@@ -203,13 +203,21 @@ fn is_same_origin(
         .and_then(|h| h.to_str().ok())
         .and_then(origin_authority)
     {
-        return is_allowed_origin(referer_origin.as_str(), expected.as_deref(), allowed_origins);
+        return is_allowed_origin(
+            referer_origin.as_str(),
+            expected.as_deref(),
+            allowed_origins,
+        );
     }
 
     false
 }
 
-fn is_allowed_origin(origin: &str, expected_origin: Option<&str>, allowed_origins: &[String]) -> bool {
+fn is_allowed_origin(
+    origin: &str,
+    expected_origin: Option<&str>,
+    allowed_origins: &[String],
+) -> bool {
     if expected_origin == Some(origin) {
         return true;
     }

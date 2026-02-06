@@ -3,6 +3,14 @@
         "src/backend/rust/Cargo.toml"
     ],
     "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.check.extraArgs": [
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+    ],
     "[rust]": {
         "editor.defaultFormatter": "rust-analyzer",
         "editor.formatOnSave": true
